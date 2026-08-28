@@ -33,8 +33,9 @@ schema = {
                 "properties": {
                     "task": {"type": "string"},
                     "lane": {"type": "string", "enum": ["now", "next", "later"]},
+                    "class": {"type": "string", "enum": ["message_person", "make_call", "research", "watch_price", "other"]},
                 },
-                "required": ["task", "lane"],
+                "required": ["task", "lane", "class"],
             },
         }
     },
@@ -46,6 +47,7 @@ resp = client.models.generate_content(
     contents=[
         "Extract every action item the speaker mentions. "
         "Lane 'now' = blocking today, 'next' = this week, 'later' = backlog. "
+        "Assign a 'class' to each task from: message_person, make_call, research, watch_price, other. "
         "If the speaker is not giving tasks, return {\"tasks\": []}.",
         audio_part,
     ],
