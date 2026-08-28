@@ -1,116 +1,26 @@
 import json
-from google import genai
-from google.genai import types
-from google.adk.agents import LlmAgent
-from google.adk.tools import FunctionTool
+from google.cloud import firestore
 from dotenv import dotenv_values
+from google.adk.agents.base_agent import BaseAgent
+from google.adk.events import Event
+from google.adk.tools import FunctionTool
+import asyncio
+import re
+
+from src.domain.parser import GeminiAudioParser
+from src.domain.orchestrator import TaskOrchestrator
 
 cfg = dotenv_values(".env")
+db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
+parser = GeminiAudioParser()
+orchestrator = TaskOrchestrator(db, parser)
 
 def extract_tasks_from_audio(audio_path: str) -> dict:
     """Extracts action items from an audio file and assigns lanes and classes."""
     print(f"[TOOL] extract_tasks_from_audio invoked with {audio_path}")
-    client = genai.Client(
-        vertexai=True,
-        project=cfg["GOOGLE_CLOUD_PROJECT"],
-        location=cfg["GOOGLE_CLOUD_LOCATION"],
-    )
-    mime = "audio/wav" if audio_path.endswith(".wav") else "audio/mp3"
-    with open(audio_path, "rb") as f:
-        audio_bytes = f.read()
-    
-    audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime)
-    
-    schema = {
-        "type": "object",
-        "properties": {
-            "tasks": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "task": {"type": "string"},
-                        "lane": {"type": "string", "enum": ["now", "next", "later"]},
-                        "class": {"type": "string", "enum": ["message_person", "make_call", "research", "watch_price", "other"]},
-                    },
-                    "required": ["task", "lane", "class"],
-                },
-            }
-        },
-        "required": ["tasks"],
-    }
-    
-    resp = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=[
-            "Extract every action item the speaker mentions. "
-            "Lane 'now' = blocking today, 'next' = this week, 'later' = backlog. "
-            "Assign a 'class' to each task from: message_person, make_call, research, watch_price, other. "
-            "If the speaker is not giving tasks, return {\"tasks\": []}.",
-            audio_part,
-        ],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=schema,
-            temperature=0.0,
-        ),
-    )
-    
-    # Extract token usage breakdown
-    token_usage = {
-        "audio": 0,
-        "text": 0,
-        "candidate": 0,
-        "total": 0
-    }
-    if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
-        um = resp.usage_metadata
-        token_usage["candidate"] = getattr(um, 'candidates_token_count', 0)
-        token_usage["total"] = getattr(um, 'total_token_count', 0)
-        
-        if hasattr(um, 'prompt_tokens_details') and um.prompt_tokens_details:
-            for detail in um.prompt_tokens_details:
-                if 'AUDIO' in str(detail.modality):
-                    token_usage["audio"] += detail.token_count
-                elif 'TEXT' in str(detail.modality):
-                    token_usage["text"] += detail.token_count
-    
-    tasks_list = json.loads(resp.text).get("tasks", [])
-    
-    # M3: Persist tasks to Firestore
-    from google.cloud import firestore
-    from datetime import datetime, timezone
-    
-    # Using project from env or cfg
-    db = firestore.Client(project=cfg["GOOGLE_CLOUD_PROJECT"])
-    
-    saved_tasks = []
-    for task_item in tasks_list:
-        doc_data = {
-            "task": task_item.get("task"),
-            "lane": task_item.get("lane"),
-            "class": task_item.get("class"),
-            "status": "pending_approval",  # Default status for trust ladder
-            "created_at": firestore.SERVER_TIMESTAMP,
-            "usage": token_usage
-        }
-        # One document per task
-        _, doc_ref = db.collection("tasks").add(doc_data)
-        doc_data["id"] = doc_ref.id
-        doc_data["created_at"] = datetime.now(timezone.utc).isoformat() # Replace sentinel for JSON serializability
-        saved_tasks.append(doc_data)
-    
-    return {
-        "tasks": saved_tasks,
-        "usage": token_usage
-    }
+    return orchestrator.process_voice_note(audio_path)
 
 extract_tool = FunctionTool(extract_tasks_from_audio)
-
-from google.adk.agents.base_agent import BaseAgent
-from google.adk.events import Event
-import asyncio
-import json
 
 class VoiceAgent(BaseAgent):
     def __init__(self, **kwargs):
@@ -129,7 +39,6 @@ class VoiceAgent(BaseAgent):
         else:
             text = str(node_input)
             
-        import re
         match = re.search(r'(/[a-zA-Z0-9_\-\./]+)', text)
         if match:
             audio_path = match.group(1)

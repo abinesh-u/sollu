@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sollu — Voice-Note Errand Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Colors — DESIGN.md */
+            --color-pale-sage: #eef2e3;
+            --color-paper-white: #fcfcfc;
+            --color-ink-black: #000000;
+            --color-charcoal: #242423;
+            --color-deep-forest: #043f2e;
+            --color-chartreuse-lime: #c8f169;
+            --color-forest-mid: #2a6f2b;
+
+            /* Documented exception: DESIGN.md has no red. Muted brick for the
+               terminal 'rejected' state only — stays in the warm/earthy family
+               rather than fighting the chartreuse with a bright alert red. */
+            --color-brick: #7a2e1e;
+            --color-brick-tint: #f0e2dd;
+
+            /* Grenette substitute. DESIGN.md's own Quick Start gives this a
+               sans-serif fallback, contradicting its rule that the serif shape
+               carries the weight — corrected to a serif stack here. */
+            --font-display: 'Fraunces', ui-serif, Georgia, Cambria, "Times New Roman", serif;
+            --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+            --text-caption: 12px;
+            --text-body-sm: 14px;
+            --text-body: 16px;
+            --text-subheading: 18px;
+            --text-heading-sm: 22px;
+            --text-heading: 36px;
+            --text-heading-lg: 56px;
+            --text-display: 96px;
+
+            --radius-sm: 4px;
+            --radius-lg: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-pale-sage);
+            color: var(--color-deep-forest);
+            font-family: var(--font-ui);
+            font-size: var(--text-body);
+            font-weight: 400;
+            line-height: 1.3;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px 120px;
+        }
+
+        /* ── Eyebrow label: Graphik 12–14px, 0.06em tracking, uppercase ── */
+        .eyebrow {
+            font-size: var(--text-caption);
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            line-height: 1.2;
+            color: var(--color-deep-forest);
+        }
+
+        /* ── Header ── */
+        header { margin-bottom: 24px; }
+
+        header .eyebrow { margin-bottom: 12px; }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: var(--text-heading-lg);
+            font-weight: 400;
+            letter-spacing: -1.68px;
+            line-height: 1.1;
+            margin: 0;
+            color: var(--color-deep-forest);
+        }
+
+        header p {
+            margin: 12px 0 0;
+            max-width: 60ch;
+            font-size: var(--text-subheading);
+            line-height: 1.44;
+            color: var(--color-charcoal);
+        }
+
+        /* ── Section headings: Grenette 36px ── */
+        .section-title {
+            font-family: var(--font-display);
+            font-size: var(--text-heading);
+            font-weight: 400;
+            letter-spacing: -0.72px;
+            line-height: 1.1;
+            margin: 0 0 20px;
+            color: var(--color-deep-forest);
+        }
+
+        /* ── Forest Stat Card ── */
+        .stat-card {
+            background-color: var(--color-deep-forest);
+            color: var(--color-paper-white);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr);
+            gap: 24px;
+            align-items: end;
+        }
+
+        .stat-card .eyebrow { color: var(--color-chartreuse-lime); }
+
+        .stat-value {
+            font-family: var(--font-ui);
+            font-weight: 400;
+            line-height: 0.9;
+            letter-spacing: -0.02em;
+            margin-top: 8px;
+            color: var(--color-paper-white);
+        }
+
+        /* Display size reserved for the single hero numeral. */
+        .stat-hero .stat-value {
+            font-size: var(--text-display);
+            letter-spacing: -2.98px;
+        }
+
+        .stat-sm .stat-value { font-size: var(--text-heading); }
+
+        .stat-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: var(--text-body-sm);
+            line-height: 1.3;
+            margin-top: 8px;
+        }
+
+        .stat-breakdown div {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid rgba(252, 252, 252, 0.18);
+            padding-bottom: 4px;
+        }
+
+        .stat-breakdown div:last-child { border-bottom: none; }
+
+        .stat-breakdown span:last-child { color: var(--color-chartreuse-lime); }
+
+        /* ── Cards: Paper White Elevated. No shadows anywhere. ── */
+        .card {
+            background-color: var(--color-paper-white);
+            border: 1px solid var(--color-ink-black);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+
+        /* ── Upload ── */
+        .upload-card { margin-bottom: 24px; }
+
+        .dropzone {
+            margin-top: 16px;
+            background-color: var(--color-pale-sage);
+            border: 1px solid var(--color-ink-black);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+            transition: background-color 0.15s;
+        }
+
+        .dropzone.dragging { background-color: var(--color-chartreuse-lime); }
+
+        .dropzone p {
+            margin: 0;
+            font-size: var(--text-body-sm);
+            color: var(--color-charcoal);
+        }
+
+        #upload-status {
+            margin: 0;
+            min-height: 1.3em;
+            font-size: var(--text-body-sm);
+            color: var(--color-charcoal);
+        }
+
+        #upload-status.error { color: var(--color-brick); }
+
+        input[type="file"] { display: none; }
+
+        /* ── Buttons: 4px radius, 12px/20px padding, Graphik 16px weight 500 ── */
+        .btn {
+            display: inline-block;
+            font-family: var(--font-ui);
+            font-size: var(--text-body);
+            font-weight: 500;
+            line-height: 1.2;
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.15s, color 0.15s;
+        }
+
+        .btn:active { transform: scale(0.99); }
+
+        .btn[aria-disabled="true"], .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* The only filled chromatic button in the system. */
+        .btn-primary {
+            background-color: var(--color-chartreuse-lime);
+            color: var(--color-ink-black);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--color-forest-mid);
+            color: var(--color-paper-white);
+        }
+
+        .btn-ghost {
+            background-color: transparent;
+            border: 1px solid var(--color-ink-black);
+            color: var(--color-ink-black);
+        }
+
+        .btn-ghost:hover { background-color: var(--color-pale-sage); }
+
+        .btn-demote {
+            background-color: transparent;
+            border: 1px solid var(--color-brick);
+            color: var(--color-brick);
+        }
+
+        .btn-demote:hover { background-color: var(--color-brick-tint); }
+
+        /* ── Two-column body ── */
+        .layout {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 32px;
+            align-items: start;
+        }
+
+        aside { position: sticky; top: 40px; }
+
+        /* ── Trust ladder ── */
+        .ladder-item {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--color-pale-sage);
+        }
+
+        .ladder-item:first-of-type { padding-top: 0; }
+        .ladder-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+        .ladder-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .ladder-count {
+            font-size: var(--text-heading-sm);
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+
+        .ladder-count small {
+            font-size: var(--text-caption);
+            color: var(--color-charcoal);
+        }
+
+        /* 3-segment progress track. */
+        .track { display: flex; gap: 4px; margin-bottom: 12px; }
+
+        .track span {
+            flex: 1;
+            height: 8px;
+            border-radius: var(--radius-sm);
+            background-color: var(--color-pale-sage);
+            border: 1px solid var(--color-ink-black);
+        }
+
+        .track span.filled {
+            background-color: var(--color-chartreuse-lime);
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: var(--text-caption);
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+        }
+
+        .badge-asks {
+            background-color: var(--color-pale-sage);
+            border: 1px solid var(--color-ink-black);
+            color: var(--color-deep-forest);
+        }
+
+        .badge-auto {
+            background-color: var(--color-deep-forest);
+            color: var(--color-paper-white);
+        }
+
+        .ladder-legend {
+            margin: 16px 0 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--color-pale-sage);
+            font-size: var(--text-body-sm);
+            line-height: 1.3;
+            color: var(--color-charcoal);
+        }
+
+        /* ── Task cards ── */
+        .tasks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .task-text {
+            font-size: var(--text-body);
+            font-weight: 400;
+            line-height: 1.3;
+            margin: 0;
+            color: var(--color-deep-forest);
+        }
+
+        .task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .task-meta .eyebrow { color: var(--color-charcoal); }
+
+        /* Status tags — the mapping fixed in the plan. */
+        .tag-status {
+            flex-shrink: 0;
+            font-size: var(--text-caption);
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 2px 12px;
+            border-radius: var(--radius-sm);
+            white-space: nowrap;
+        }
+
+        .status-pending_approval {
+            background-color: var(--color-chartreuse-lime);
+            color: var(--color-ink-black);
+        }
+
+        .status-auto_approved {
+            background-color: var(--color-deep-forest);
+            color: var(--color-paper-white);
+        }
+
+        .status-approved {
+            background-color: var(--color-pale-sage);
+            border: 1px solid var(--color-ink-black);
+            color: var(--color-deep-forest);
+        }
+
+        .status-rejected {
+            background-color: var(--color-brick-tint);
+            border: 1px solid var(--color-brick);
+            color: var(--color-brick);
+        }
+
+        /* Deferred strip. Copy stays factual about the stored condition and the
+           scheduled re-check — the evaluator is a stub, so no live-feed wording. */
+        .deferred {
+            margin-top: 16px;
+            background-color: var(--color-pale-sage);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-size: var(--text-body-sm);
+            line-height: 1.3;
+        }
+
+        .deferred .eyebrow { margin-bottom: 4px; }
+
+        /* Execution strip. Same slot holds "Executing…" and the finished
+           artifact, so the card resolves in place instead of the finding
+           appearing out of nowhere on the next poll. */
+        .artifact {
+            margin-top: 16px;
+            background-color: var(--color-pale-sage);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-size: var(--text-body-sm);
+            line-height: 1.44;
+            white-space: pre-wrap;
+        }
+
+        .artifact .eyebrow { margin-bottom: 6px; }
+
+        .artifact.is-executing {
+            border-left: 3px solid var(--color-chartreuse-lime);
+            color: var(--color-charcoal);
+        }
+
+        .artifact.is-failed {
+            background-color: var(--color-brick-tint);
+            color: var(--color-brick);
+        }
+
+        .artifact-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        /* Draft-only marker. Never let a card imply a message was sent or a
+           call was placed — nothing here leaves the system. */
+        .artifact-tag {
+            font-family: var(--font-ui);
+            font-size: var(--text-caption);
+            font-weight: 500;
+            letter-spacing: 0.72px;
+            text-transform: uppercase;
+            border-radius: var(--radius-sm);
+            padding: 2px 8px;
+            background-color: var(--color-paper-white);
+            border: 1px solid var(--color-deep-forest);
+            color: var(--color-deep-forest);
+        }
+
+        .artifact-tag.tag-grounded {
+            background-color: var(--color-chartreuse-lime);
+            border-color: var(--color-chartreuse-lime);
+            color: var(--color-ink-black);
+        }
+
+        .task-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .empty {
+            font-size: var(--text-body-sm);
+            color: var(--color-charcoal);
+        }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: minmax(0, 1fr); }
+            aside { position: static; }
+            .stat-card { grid-template-columns: minmax(0, 1fr); }
+            .stat-hero .stat-value { font-size: var(--text-heading-lg); letter-spacing: -1.68px; }
+            h1 { font-size: var(--text-heading); letter-spacing: -0.72px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="eyebrow">Voice-note errand agent</div>
+            <h1>Sollu</h1>
+            <p>A spoken note is decomposed into tasks and triaged into a lane. Each task class
+               asks permission until it has earned enough approvals to be auto-approved.</p>
+        </header>
+
+        <section class="stat-card" id="stat-card">
+            <div class="stat-hero">
+                <div class="eyebrow">Notes processed</div>
+                <div class="stat-value" id="stat-notes">0</div>
+            </div>
+            <div class="stat-sm">
+                <div class="eyebrow">Total tokens</div>
+                <div class="stat-value" id="stat-total">—</div>
+            </div>
+            <div class="stat-sm">
+                <div class="eyebrow">Avg / note</div>
+                <div class="stat-value" id="stat-avg">—</div>
+            </div>
+            <div>
+                <div class="eyebrow">Latest note breakdown</div>
+                <div class="stat-breakdown" id="stat-breakdown">
+                    <div><span>Audio</span><span>—</span></div>
+                    <div><span>Text</span><span>—</span></div>
+                    <div><span>Candidate</span><span>—</span></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="layout">
+            <aside>
+                <div class="card">
+                    <h2 class="section-title">Trust ladder</h2>
+                    <div id="ladder-list">
+                        <p class="empty">Loading…</p>
+                    </div>
+                    <p class="ladder-legend">A class auto-approves after 3 approvals.
+                       Rejecting an auto-approved task resets that class to zero.</p>
+                </div>
+            </aside>
+
+            <main>
+                <section class="card upload-card">
+                    <h2 class="section-title">New voice note</h2>
+                    <p id="upload-status">Upload a recording to extract and triage its tasks.</p>
+                    <div class="dropzone" id="dropzone">
+                        <label class="btn btn-primary" for="file-input" id="file-label">Choose voice note</label>
+                        <input type="file" id="file-input" accept="audio/*">
+                        <p>or drop a .wav / .mp3 file here</p>
+                    </div>
+                </section>
+
+                <h2 class="section-title">Activity &amp; tasks</h2>
+                <div class="tasks-container" id="tasks-list">
+                    <p class="empty">Loading…</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const THRESHOLD = 3;
+
+        // Task text comes from model output and is injected via innerHTML.
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g,
+                c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function fmtTime(value) {
+            if (!value) return '—';
+            const d = new Date(value);
+            return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString();
+        }
+
+        // check_after is a float UNIX timestamp in seconds. The model sets
+        // defer_duration_minutes per task, so this spans minutes to days.
+        function fmtCheckAfter(ts) {
+            if (typeof ts !== 'number') return null;
+            const mins = Math.round((ts * 1000 - Date.now()) / 60000);
+            if (mins <= 0) return 'next check due';
+            if (mins < 60) return `next check in ${mins}m`;
+            const hrs = Math.round(mins / 60);
+            if (hrs < 24) return `next check in ${hrs}h`;
+            const days = Math.round(hrs / 24);
+            return `next check in ${days}d`;
+        }
+
+        async function fetchLadder() {
+            const res = await fetch('/api/trust_ladder');
+            const data = await res.json();
+            const container = document.getElementById('ladder-list');
+            container.innerHTML = '';
+
+            Object.keys(data).forEach(cls => {
+                const count = data[cls];
+                const isAuto = count >= THRESHOLD;
+                const filled = Math.min(count, THRESHOLD);
+
+                let track = '';
+                for (let i = 0; i < THRESHOLD; i++) {
+                    track += `<span class="${i < filled ? 'filled' : ''}"></span>`;
+                }
+
+                const item = document.createElement('div');
+                item.className = 'ladder-item';
+                item.innerHTML = `
+                    <div class="ladder-head">
+                        <div class="eyebrow">${esc(cls.replace('_', ' '))}</div>
+                        <div class="ladder-count" title="${count} approval${count === 1 ? '' : 's'} recorded">${Math.min(count, THRESHOLD)}<small>/${THRESHOLD}</small></div>
+                    </div>
+                    <div class="track">${track}</div>
+                    <div class="badge ${isAuto ? 'badge-auto' : 'badge-asks'}">
+                        ${isAuto ? 'Auto-approves' : 'Asks first'}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // The orchestrator writes the same usage object onto every task from one
+        // note, so usage must be de-duplicated by correlation_id before summing.
+        function renderCost(tasks) {
+            const notes = new Map();
+            tasks.forEach(t => {
+                if (t.correlation_id && t.usage && !notes.has(t.correlation_id)) {
+                    notes.set(t.correlation_id, t.usage);
+                }
+            });
+
+            const usages = Array.from(notes.values());
+            const count = usages.length;
+            const total = usages.reduce((sum, u) => sum + (u.total || 0), 0);
+
+            document.getElementById('stat-notes').textContent = count;
+            document.getElementById('stat-total').textContent = count ? total.toLocaleString() : '—';
+            document.getElementById('stat-avg').textContent =
+                count ? Math.round(total / count).toLocaleString() : '—';
+
+            // tasks arrive newest-first, so the first note seen is the latest.
+            const latest = usages[0] || {};
+            document.getElementById('stat-breakdown').innerHTML = `
+                <div><span>Audio</span><span>${count ? (latest.audio || 0).toLocaleString() : '—'}</span></div>
+                <div><span>Text</span><span>${count ? (latest.text || 0).toLocaleString() : '—'}</span></div>
+                <div><span>Candidate</span><span>${count ? (latest.candidate || 0).toLocaleString() : '—'}</span></div>
+            `;
+        }
+
+        // Draft classes never send anything. The label says so on the card so a
+        // finished artifact can't be mistaken for a delivered message or a
+        // placed call.
+        const DRAFT_LABELS = {
+            message_person: 'Draft only — not sent',
+            make_call: 'Script only — no call placed'
+        };
+
+        function renderArtifact(task) {
+            const state = task.execution_status;
+            if (!state) return '';
+
+            // Say it outright rather than leaving a blank card — "no executor"
+            // is part of the per-class story, not a gap.
+            if (state === 'no_executor') {
+                return `
+                    <div class="artifact">
+                        <div class="eyebrow">No executor</div>
+                        Approval recorded. This class has nothing wired to execute.
+                    </div>
+                `;
+            }
+
+            if (state === 'executing') {
+                return `
+                    <div class="artifact is-executing">
+                        <div class="eyebrow">Executing…</div>
+                        Running the ${esc((task.class || 'other').replace('_', ' '))} executor.
+                    </div>
+                `;
+            }
+
+            if (state === 'failed') {
+                return `
+                    <div class="artifact is-failed">
+                        <div class="eyebrow">Execution failed</div>
+                        ${esc(task.execution_error || 'No error recorded.')}
+                    </div>
+                `;
+            }
+
+            if (!task.artifact) return '';
+
+            const tags = [];
+            if (DRAFT_LABELS[task.class]) {
+                tags.push(`<span class="artifact-tag">${esc(DRAFT_LABELS[task.class])}</span>`);
+            }
+            if (task.grounded) {
+                tags.push('<span class="artifact-tag tag-grounded">Web-grounded</span>');
+            }
+            const secs = task.execution_seconds;
+            if (secs) {
+                tags.push(`<span class="artifact-tag">${esc(String(secs))}s</span>`);
+            }
+
+            const heading = state === 'draft_ready' ? 'Draft' : 'Result';
+
+            // task.artifact is model-generated prose going into innerHTML — esc() is
+            // load-bearing here, not decorative.
+            return `
+                <div class="artifact">
+                    <div class="eyebrow">${heading}</div>
+                    ${esc(task.artifact)}
+                    ${tags.length ? `<div class="artifact-tags">${tags.join('')}</div>` : ''}
+                </div>
+            `;
+        }
+
+        async function fetchTasks() {
+            const res = await fetch('/api/tasks');
+            const data = await res.json();
+            const container = document.getElementById('tasks-list');
+            container.innerHTML = '';
+
+            renderCost(data);
+
+            if (!data.length) {
+                container.innerHTML = '<p class="empty">No tasks yet. Upload a voice note to get started.</p>';
+                return;
+            }
+
+            data.forEach(task => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                let actionsHtml = '';
+                if (task.status === 'pending_approval') {
+                    actionsHtml = `
+                        <div class="task-actions">
+                            <button class="btn btn-primary" onclick="approveTask('${task.id}')">Approve</button>
+                            <button class="btn btn-ghost" onclick="rejectTask('${task.id}')">Reject</button>
+                        </div>
+                    `;
+                } else if (task.status === 'auto_approved') {
+                    actionsHtml = `
+                        <div class="task-actions">
+                            <button class="btn btn-demote" onclick="rejectTask('${task.id}')"
+                                title="Rejecting an auto-approved task resets this class to zero">Demote &amp; reject</button>
+                        </div>
+                    `;
+                }
+
+                let deferredHtml = '';
+                if (task.lane === 'later' && task.condition) {
+                    const when = fmtCheckAfter(task.check_after);
+                    deferredHtml = `
+                        <div class="deferred">
+                            <div class="eyebrow">Deferred${when ? ' · ' + esc(when) : ''}</div>
+                            Condition: ${esc(task.condition)}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="task-header">
+                        <h3 class="task-text">${esc(task.task)}</h3>
+                        <div class="tag-status status-${task.status}">${esc(task.status.replace('_', ' '))}</div>
+                    </div>
+                    <div class="task-meta">
+                        <div class="eyebrow">${esc((task.class || 'other').replace('_', ' '))}</div>
+                        <div class="eyebrow">Lane: ${esc(task.lane)}</div>
+                        <div class="eyebrow">${esc(fmtTime(task.created_at))}</div>
+                    </div>
+                    ${deferredHtml}
+                    ${renderArtifact(task)}
+                    ${actionsHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ── Upload ──
+        const fileInput = document.getElementById('file-input');
+        const fileLabel = document.getElementById('file-label');
+        const dropzone = document.getElementById('dropzone');
+        const uploadStatus = document.getElementById('upload-status');
+
+        async function uploadFile(file) {
+            if (!file) return;
+
+            fileLabel.setAttribute('aria-disabled', 'true');
+            uploadStatus.classList.remove('error');
+            uploadStatus.textContent = `Processing ${file.name}…`;
+
+            const body = new FormData();
+            body.append('file', file);
+
+            try {
+                const res = await fetch('/tasks', { method: 'POST', body });
+                const data = await res.json();
+
+                // /tasks returns HTTP 200 with an error key on failure, so res.ok
+                // is not sufficient here.
+                if (data.error) {
+                    uploadStatus.classList.add('error');
+                    uploadStatus.textContent = `${data.error}: ${data.raw || ''}`;
+                } else {
+                    const n = (data.tasks || []).length;
+                    const tokens = (data.usage && data.usage.total) || 0;
+                    uploadStatus.textContent =
+                        `${n} task${n === 1 ? '' : 's'} extracted · ${tokens.toLocaleString()} tokens`;
+                    refreshAll();
+                }
+            } catch (e) {
+                uploadStatus.classList.add('error');
+                uploadStatus.textContent = `Upload failed: ${e.message}`;
+            } finally {
+                fileLabel.removeAttribute('aria-disabled');
+                fileInput.value = '';
+            }
+        }
+
+        fileInput.addEventListener('change', e => uploadFile(e.target.files[0]));
+
+        dropzone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropzone.classList.add('dragging');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragging'));
+        dropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropzone.classList.remove('dragging');
+            uploadFile(e.dataTransfer.files[0]);
+        });
+
+        async function approveTask(id) {
+            await fetch(`/api/tasks/${id}/approve`, { method: 'POST' });
+            refreshAll();
+        }
+
+        async function rejectTask(id) {
+            await fetch(`/api/tasks/${id}/reject`, { method: 'POST' });
+            refreshAll();
+        }
+
+        function refreshAll() {
+            fetchLadder();
+            fetchTasks();
+        }
+
+        // Init
+        refreshAll();
+        // Auto-refresh every 5s
+        setInterval(refreshAll, 5000);
+    </script>
+</body>
+</html>
