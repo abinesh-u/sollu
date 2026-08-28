@@ -914,12 +914,14 @@
             renderImageSlot();
         });
 
-        async function uploadFile(file) {
+        async function uploadFile(file, detail) {
             if (!file) return;
 
             fileLabel.setAttribute('aria-disabled', 'true');
             uploadStatus.classList.remove('error');
-            uploadStatus.textContent = `Processing ${file.name}…`;
+            uploadStatus.textContent = detail
+                ? `Processing ${file.name} (${detail})…`
+                : `Processing ${file.name}…`;
 
             const body = new FormData();
             body.append('file', file);
@@ -1019,9 +1021,21 @@
                 setRecording(false);
                 const type = recorder.mimeType || mimeType || 'audio/webm';
                 const blob = new Blob(chunks, { type });
+
+                // A recorder that yields nothing must say so. Silently posting an
+                // empty file looks identical to the request never being sent.
+                if (!blob.size) {
+                    uploadStatus.classList.add('error');
+                    uploadStatus.textContent =
+                        `Recording produced no audio (0 bytes, ${chunks.length} chunks, ${type}). ` +
+                        `Check the mic input, or use Choose voice note.`;
+                    return;
+                }
+
                 const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'm4a' : 'webm';
                 // Same uploadFile() the picker uses — one code path.
-                uploadFile(new File([blob], `recording.${ext}`, { type }));
+                uploadFile(new File([blob], `recording.${ext}`, { type }),
+                           `${(blob.size / 1024).toFixed(0)} KB ${type}`);
             };
             recorder.start();
 
