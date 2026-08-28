@@ -646,6 +646,10 @@
                         <p>drop a .wav / .mp3 file here</p>
                     </div>
                     <div class="image-slot">
+                        <button class="btn btn-ghost" id="speak-toggle" aria-pressed="false">Spoken summary: off</button>
+                        <span class="eyebrow" id="speak-note">Secondary model · confirmation only</span>
+                    </div>
+                    <div class="image-slot">
                         <label class="btn btn-ghost" for="image-input" id="image-label">Add an image</label>
                         <input type="file" id="image-input" accept="image/*">
                         <span class="eyebrow" id="image-name">Optional · sent with the note in one request</span>
@@ -950,6 +954,9 @@
                     uploadStatus.textContent =
                         `${n} task${n === 1 ? '' : 's'} extracted · ${tokens.toLocaleString()} tokens`;
                     refreshAll();
+                    // Fire-and-forget: never awaited, so a slow or failing TTS
+                    // call cannot hold up the task list appearing.
+                    speakSummary(data);
                 }
             } catch (e) {
                 uploadStatus.classList.add('error');
@@ -964,6 +971,56 @@
         }
 
         fileInput.addEventListener('change', e => uploadFile(e.target.files[0]));
+
+        // ── Spoken confirmation (secondary model, output only) ──
+        // Defaults to OFF and stays off unless the user opts in: audio firing
+        // unexpectedly during a recorded demo is worse than no audio at all.
+        // Every failure here is silent — the text summary is the real one.
+        const speakToggle = document.getElementById('speak-toggle');
+        let speakOn = false;
+        try {
+            speakOn = localStorage.getItem('sollu.speak') === 'on';
+        } catch (e) { /* private mode — stay off */ }
+
+        function renderSpeakToggle() {
+            speakToggle.textContent = `Spoken summary: ${speakOn ? 'on' : 'off'}`;
+            speakToggle.setAttribute('aria-pressed', String(speakOn));
+        }
+        renderSpeakToggle();
+
+        speakToggle.addEventListener('click', () => {
+            speakOn = !speakOn;
+            try { localStorage.setItem('sollu.speak', speakOn ? 'on' : 'off'); } catch (e) {}
+            renderSpeakToggle();
+        });
+
+        async function speakSummary(data) {
+            if (!speakOn) return;
+            const tasks = data.tasks || [];
+            // Counts tallied from the triage result that already came back.
+            // Nothing is re-derived, and no task text is sent.
+            const payload = {
+                total: tasks.length,
+                pending: tasks.filter(t => t.status === 'pending_approval').length,
+                watching: tasks.filter(t => t.lane === 'later').length,
+                auto_classes: [...new Set(tasks
+                    .filter(t => t.status === 'auto_approved')
+                    .map(t => t.class))],
+                correlation_id: (tasks[0] || {}).correlation_id || 'speak'
+            };
+            try {
+                const res = await fetch('/api/speak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.status !== 200) return;   // 204 → no audio, text stands
+                const buf = await res.blob();
+                await new Audio(URL.createObjectURL(buf)).play();
+            } catch (e) {
+                // Deliberately silent. This layer is decoration.
+            }
+        }
 
         // ── Mic capture ──
         // Posts to the same /tasks route as a file upload; there is no separate

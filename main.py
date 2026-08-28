@@ -4,7 +4,7 @@ import asyncio
 import uuid
 import time
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends, BackgroundTasks
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from google.cloud import firestore
 from dotenv import dotenv_values
 from datetime import datetime, timezone
@@ -17,6 +17,7 @@ from src.domain.evaluator import ConditionEvaluator
 from src.executors.registry import KNOWN_CLASSES, describe
 from src.executors.gemini_executors import warm_up
 from src.domain.executor_runner import run_for_task, run_auto_approved
+from src.domain import speaker
 
 cfg = dotenv_values(".env")
 db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
@@ -105,6 +106,28 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
         for p in (file_path, image_path):
             if p and os.path.exists(p):
                 os.remove(p)
+
+@app.post("/api/speak")
+def speak_summary(payload: dict):
+    """Voice an already-computed triage result. Secondary model, output only.
+
+    Given counts the caller already has — this re-derives nothing, and neither
+    the audio nor the transcript nor the task text reaches the TTS model. On any
+    failure it returns 204 and the UI keeps its text summary; nothing here can
+    affect upload, triage, execution, or the ladder.
+    """
+    correlation_id = payload.get("correlation_id", "speak")
+    text = speaker.build_summary(
+        total=int(payload.get("total", 0)),
+        pending=int(payload.get("pending", 0)),
+        watching=int(payload.get("watching", 0)),
+        auto_classes=payload.get("auto_classes") or [],
+    )
+    audio = speaker.speak(text, correlation_id)
+    if not audio:
+        return Response(status_code=204)
+    return Response(content=audio, media_type="audio/wav",
+                    headers={"X-Spoken-Text": text})
 
 @app.get("/api/tasks")
 def get_tasks():

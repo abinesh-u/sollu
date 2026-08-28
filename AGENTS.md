@@ -18,7 +18,8 @@ not for elegance.
 | Decision | Value |
 |---|---|
 | GCP project | `sixth-radar-506906-i1` |
-| Model | `gemini-3.5-flash` |
+| Model (triage, extraction, executors) | `gemini-3.5-flash` |
+| Secondary model (spoken confirmation ONLY) | `gemini-2.5-flash-tts` |
 | Model endpoint region | `global` (NOT asia-south1) |
 | Infra region (Cloud Run, Firestore) | `asia-south1` |
 | Firestore mode | Native |
@@ -30,6 +31,28 @@ not for elegance.
 Why global endpoint: Gemini 3.5 Flash is only offered as Single Zone Provisioned
 Throughput in asia-south1, so it is not reachable pay-as-you-go from Mumbai.
 Model region and infra region are independent.
+
+## Model split — do not blur this
+
+| Purpose | Model |
+|---|---|
+| Triage, extraction, all executors | `gemini-3.5-flash` |
+| Spoken confirmation only | `gemini-2.5-flash-tts` |
+
+`gemini-3.5-flash` does all of the reasoning, which is what the hackathon's
+"Gemini 3.5 or newer" requirement is about. The TTS model is output-only: it is
+handed one finished English sentence, built in Python from counts already
+computed, and voices it. It never touches triage, extraction, executors, or
+anything on the critical path, and it never sees the audio or the transcript.
+If it fails the app behaves exactly as before — verified by pointing it at a
+bogus model string.
+
+`gemini-3.1-flash-live` does NOT exist; it 404s as a Vertex publisher model. The
+audio-capable models on this project are `gemini-2.5-flash-tts`,
+`gemini-2.5-pro-tts`, `gemini-live-2.5-flash-native-audio` and
+`gemini-omni-1.1-flash-preview`.
+
+Never say "built on Gemini 2.5", and never imply the secondary model reasons.
 
 ## Stale-knowledge warning
 
@@ -83,8 +106,9 @@ Cost per note is a scored operational metric.
 
 ## Out of scope
 
-- Bidirectional live streaming API (wrong shape; the live model is 2.5, which is
-  disqualifying)
+- Bidirectional live streaming API (wrong shape, and not needed: M12's spoken
+  confirmation is one-way — a single generate_content call, no session, no websocket)
 - Dockerfile
 - Real Workspace OAuth if drafts-held-for-approval is sufficient
-- Any second modality until the spine is deployed
+- Any further modality beyond M10's image input and M11's mic capture, both of
+  which are deployed
