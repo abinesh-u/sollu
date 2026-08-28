@@ -75,8 +75,33 @@ def extract_tasks_from_audio(audio_path: str) -> dict:
                 elif 'TEXT' in str(detail.modality):
                     token_usage["text"] += detail.token_count
     
+    tasks_list = json.loads(resp.text).get("tasks", [])
+    
+    # M3: Persist tasks to Firestore
+    from google.cloud import firestore
+    from datetime import datetime, timezone
+    
+    # Using project from env or cfg
+    db = firestore.Client(project=cfg["GOOGLE_CLOUD_PROJECT"])
+    
+    saved_tasks = []
+    for task_item in tasks_list:
+        doc_data = {
+            "task": task_item.get("task"),
+            "lane": task_item.get("lane"),
+            "class": task_item.get("class"),
+            "status": "pending_approval",  # Default status for trust ladder
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "usage": token_usage
+        }
+        # One document per task
+        _, doc_ref = db.collection("tasks").add(doc_data)
+        doc_data["id"] = doc_ref.id
+        doc_data["created_at"] = datetime.now(timezone.utc).isoformat() # Replace sentinel for JSON serializability
+        saved_tasks.append(doc_data)
+    
     return {
-        "tasks": json.loads(resp.text).get("tasks", []),
+        "tasks": saved_tasks,
         "usage": token_usage
     }
 

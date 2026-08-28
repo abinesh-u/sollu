@@ -6,7 +6,7 @@ Usage:
 import sys
 from dotenv import dotenv_values
 from google import genai
-from google.genai import types
+from google.genai import types  
 
 cfg = dotenv_values(".env")
 audio_path = sys.argv[1] if len(sys.argv) > 1 else "/tmp/voice-test/harvard.wav"
