@@ -25,7 +25,7 @@ not for elegance.
 | Service account | `voice-agent@sixth-radar-506906-i1.iam.gserviceaccount.com` |
 | Package manager | `uv` |
 | Deploy | Cloud Run buildpack via `--source .`, no Dockerfile |
-| Thinking budget | `0` for triage (verified: correct output, ~2.6s p50) |
+| Thinking budget | `0` for triage (verified: correct output, 3.2s p50 post-M10) |
 
 Why global endpoint: Gemini 3.5 Flash is only offered as Single Zone Provisioned
 Throughput in asia-south1, so it is not reachable pay-as-you-go from Mumbai.
