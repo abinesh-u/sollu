@@ -1,0 +1,22 @@
+[project]
+name = "voice-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Abinesh U", email = "abinesh3200@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "google-adk>=2.8.0",
+    "google-cloud-firestore>=2.29.0",
+    "google-cloud-pubsub>=2.39.2",
+    "google-genai>=2.20.0",
+]
+
+[project.scripts]
+voice-agent = "voice_agent:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
