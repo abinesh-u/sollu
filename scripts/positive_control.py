@@ -1,132 +1,99 @@
-"""Positive-control audio round-trip.
+"""Positive-control audio round-trip against the PRODUCTION call path.
 
-Runs the same audio file N times against gemini-3.5-flash with low thinking budget,
-logs per-run token breakdown to logs/runs.jsonl, prints the JSON each run.
+This runs `GeminiAudioParser.parse_audio` -- the same code `POST /tasks` uses.
+It previously built its own client, prompt and schema, which had drifted from
+the parser (no `class`/`condition` fields, and a prompt that lanes the Cloud SQL
+task differently). A canary testing a prompt that isn't the one running
+certifies nothing, so it now shares the parser outright.
+
+The gate is count + lane + class, not verbatim task text. Phrasing and array
+order vary run to run even at temperature 0 -- ordinary LLM non-determinism --
+and nothing downstream consumes the wording: the trust ladder and the executors
+consume `class` and `lane`. An exact-string gate would fail on an unchanged
+codebase, which makes it useless as a regression signal.
 
 Usage:
-    uv run python scripts/positive_control.py --runs 5 --budget 0
+    uv run python scripts/positive_control.py --runs 5
 """
 import argparse
 import json
+import statistics
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
-from dotenv import dotenv_values
-from google import genai
-from google.genai import types
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src.domain.parser import GeminiAudioParser
 
 
-SCHEMA = {
-    "type": "object",
-    "properties": {
-        "tasks": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "task": {"type": "string"},
-                    "lane": {"type": "string", "enum": ["now", "next", "later"]},
-                },
-                "required": ["task", "lane"],
-            },
-        }
-    },
-    "required": ["tasks"],
-}
+def signature(tasks: list) -> str:
+    """The gated shape: how many tasks, and each one's lane and class.
 
-PROMPT = (
-    "Extract every concrete action item the speaker commits to. "
-    "Lane 'now' = blocking today or before tomorrow's standup. "
-    "Lane 'next' = a specific this-week commitment with a deadline the speaker named. "
-    "Lane 'later' = backlog, watch-only, or 'check if/whether something happens' — no fixed date. "
-    "Self-corrections override earlier mentions: if the speaker replaces a task, keep the final one. "
-    "Hedged or speculative thoughts ('I'm thinking', 'maybe we should', 'I wonder if', 'probably should') are NOT tasks. "
-    "Price watches, drop alerts, and 'check if X happens' requests are lane=later. "
-    "If the speaker is not committing to action, return {\"tasks\": []}."
-)
+    Sorted, so a reordered array is not treated as a regression.
+    """
+    return json.dumps(sorted([t.get("lane"), t.get("class")] for t in tasks))
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--audio", default="/tmp/voice-test/positive.wav")
     ap.add_argument("--runs", type=int, default=5)
-    ap.add_argument("--budget", type=int, default=0,
-                    help="thinking_budget: 0 disables thinking, None lets model decide")
-    ap.add_argument("--model", default="gemini-3.5-flash")
     ap.add_argument("--log", default="logs/runs.jsonl")
+    ap.add_argument("--budget", type=int, default=None,
+                    help="accepted for backwards compatibility and ignored -- "
+                         "thinking_budget is owned by GeminiAudioParser")
     args = ap.parse_args()
 
-    cfg = dotenv_values(".env")
-    client = genai.Client(
-        vertexai=True,
-        project=cfg["GOOGLE_CLOUD_PROJECT"],
-        location=cfg["GOOGLE_CLOUD_LOCATION"],
-    )
+    if args.budget is not None:
+        print(f"note: --budget {args.budget} ignored; the parser sets thinking_budget itself\n")
 
     audio_bytes = Path(args.audio).read_bytes()
-    audio_part = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
+    parser = GeminiAudioParser()
 
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    thinking = args.budget if args.budget >= 0 else None
+    sigs = Counter()
+    elapsed_all = []
 
     for run_idx in range(1, args.runs + 1):
         t0 = time.perf_counter()
-        resp = client.models.generate_content(
-            model=args.model,
-            contents=[PROMPT, audio_part],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=SCHEMA,
-                temperature=0.0,
-                thinking_config=types.ThinkingConfig(
-                    thinking_budget=thinking,
-                    include_thoughts=False,
-                ) if thinking is not None else types.ThinkingConfig(
-                    include_thoughts=False,
-                ),
-            ),
-        )
+        tasks, usage = parser.parse_audio(audio_bytes, "audio/wav")
         elapsed = time.perf_counter() - t0
+        elapsed_all.append(elapsed)
 
-        if resp.text is None:
-            raise RuntimeError(f"run {run_idx}: empty response text (finish_reason={resp.candidates[0].finish_reason if resp.candidates else 'unknown'})")
-        parsed = json.loads(resp.text)
-        u = resp.usage_metadata
-        breakdown = {
-            "prompt_audio": _modality_tokens(u, "AUDIO"),
-            "prompt_text":  _modality_tokens(u, "TEXT"),
-            "thoughts":     (u.thoughts_token_count if u and u.thoughts_token_count else 0),
-            "candidate":    (u.candidates_token_count if u and u.candidates_token_count else 0),
-            "total":        (u.total_token_count if u else 0),
-        }
+        sig = signature(tasks)
+        sigs[sig] += 1
 
         record = {
             "run": run_idx,
-            "model": args.model,
-            "thinking_budget": thinking,
+            "model": "gemini-3.5-flash",
+            "via": "GeminiAudioParser.parse_audio",
             "elapsed_sec": round(elapsed, 3),
-            "tokens": breakdown,
-            "tasks_count": len(parsed["tasks"]),
-            "tasks": parsed["tasks"],
+            "tokens": usage,
+            "tasks_count": len(tasks),
+            "signature": sig,
+            "tasks": tasks,
         }
         with log_path.open("a") as f:
             f.write(json.dumps(record) + "\n")
 
-        print(f"\n=== RUN {run_idx}/{args.runs}  ({elapsed:.2f}s) ===")
-        print(json.dumps(parsed, indent=2))
-        print(f"tokens: {breakdown}")
+        print(f"=== RUN {run_idx}/{args.runs}  ({elapsed:.2f}s, {usage['total']} tokens) ===")
+        for t in tasks:
+            print(f"    [{t.get('lane')}/{t.get('class')}] {t.get('task')}")
 
-
-def _modality_tokens(usage, modality: str) -> int:
-    if not usage or not usage.prompt_tokens_details:
-        return 0
-    for d in usage.prompt_tokens_details:
-        if d.modality and d.modality.name == modality:
-            return d.token_count or 0
-    return 0
+    top_sig, top_n = sigs.most_common(1)[0]
+    print(f"\n--- latency over {args.runs} runs ---")
+    print(f"  p50 {statistics.median(elapsed_all):.2f}s   "
+          f"min {min(elapsed_all):.2f}s   max {max(elapsed_all):.2f}s")
+    print(f"\n--- stability (count + lane + class) ---")
+    for sig, n in sigs.most_common():
+        print(f"  {n}/{args.runs}  {sig}")
+    print(f"\nVERDICT: {top_n}/{args.runs} identical on count+lane+class")
+    if top_n != args.runs:
+        sys.exit(f"UNSTABLE: {len(sigs)} distinct shapes across {args.runs} runs")
 
 
 if __name__ == "__main__":
