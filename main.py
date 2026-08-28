@@ -15,6 +15,7 @@ from src.domain.orchestrator import TaskOrchestrator
 from src.domain.logger import log_event
 from src.domain.evaluator import ConditionEvaluator
 from src.executors.registry import KNOWN_CLASSES, describe
+from src.executors.gemini_executors import warm_up
 from src.domain.executor_runner import run_for_task, run_auto_approved
 
 cfg = dotenv_values(".env")
@@ -31,6 +32,20 @@ def verify_cron_secret(x_cron_secret: str = Header(None)):
     if not expected or x_cron_secret != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return x_cron_secret
+
+@app.on_event("startup")
+def _warm_clients():
+    """Build the executor client before the first request needs it.
+
+    Executors run under a wall-clock deadline, so connection setup must not
+    happen inside one on a cold instance. Never fatal — a failure here just
+    means the first executor pays the cost it would have paid anyway.
+    """
+    try:
+        warm_up()
+        log_event("startup", "executor client warmed")
+    except Exception as e:
+        log_event("startup", "executor warm-up failed", error=f"{type(e).__name__}: {e}"[:200])
 
 @app.get("/health")
 def health_check():

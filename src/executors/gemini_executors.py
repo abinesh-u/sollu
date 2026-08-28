@@ -21,25 +21,28 @@ from src.executors.base import (
     ExecutionResult,
 )
 
-RESEARCH_TIMEOUT_MS = 45_000
-DRAFT_TIMEOUT_MS = 30_000
-
-_research_client = None
-_draft_client = None
-
-
-def _research() -> "object":
-    global _research_client
-    if _research_client is None:
-        _research_client = vertex_client(timeout_ms=RESEARCH_TIMEOUT_MS)
-    return _research_client
+# One client for all three executors. Per-executor HttpOptions.timeout values
+# bought nothing — that setting is an httpx read timeout, not a wall-clock
+# deadline (a grounded call ran 244s under a 40s setting), so the real deadline
+# lives in executor_runner. Two clients only meant paying the first-call
+# connection cost twice on a cold instance.
+_client = None
 
 
-def _drafts() -> "object":
-    global _draft_client
-    if _draft_client is None:
-        _draft_client = vertex_client(timeout_ms=DRAFT_TIMEOUT_MS)
-    return _draft_client
+def _gemini() -> "object":
+    global _client
+    if _client is None:
+        _client = vertex_client()
+    return _client
+
+
+def warm_up() -> None:
+    """Build the client ahead of the first real task.
+
+    Called at app startup so a cold instance pays connection setup before a
+    user is waiting on it, rather than inside a deadline-bounded executor.
+    """
+    _gemini()
 
 
 def _usage(resp) -> dict:
@@ -71,7 +74,7 @@ class ResearchExecutor:
 
     def run(self, task: dict) -> ExecutionResult:
         t0 = time.perf_counter()
-        resp = _research().models.generate_content(
+        resp = _gemini().models.generate_content(
             model="gemini-3.5-flash",
             contents=(
                 "Research this task and answer it directly in two or three sentences. "
@@ -121,7 +124,7 @@ class _DraftExecutor:
 
     def run(self, task: dict) -> ExecutionResult:
         t0 = time.perf_counter()
-        resp = _drafts().models.generate_content(
+        resp = _gemini().models.generate_content(
             model="gemini-3.5-flash",
             contents=f"{self.prompt}\nTask: {task.get('task', '')}",
             config=types.GenerateContentConfig(
