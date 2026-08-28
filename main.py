@@ -52,7 +52,8 @@ def health_check():
     return {"status": "ok"}
 
 @app.post("/tasks")
-async def process_audio(background: BackgroundTasks, file: UploadFile = File(...)):
+async def process_audio(background: BackgroundTasks, file: UploadFile = File(...),
+                        image: UploadFile = File(None)):
     correlation_id = str(uuid.uuid4())
     # Save the uploaded file temporarily
     file_path = f"/tmp/{file.filename}"
@@ -60,11 +61,23 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
         file_bytes = await file.read()
         f.write(file_bytes)
 
-    log_event(correlation_id, "note received", size_bytes=len(file_bytes))
+    # Optional image, sent in the same Gemini request as the audio.
+    image_path = None
+    image_mime = None
+    if image is not None and image.filename:
+        image_mime = image.content_type or "image/jpeg"
+        image_path = f"/tmp/{correlation_id}-image"
+        with open(image_path, "wb") as f:
+            f.write(await image.read())
+
+    log_event(correlation_id, "note received", size_bytes=len(file_bytes),
+              with_image=bool(image_path))
 
     try:
         # Run orchestrator synchronously in thread pool
-        tasks_data = await asyncio.to_thread(orchestrator.process_voice_note, file_path, correlation_id)
+        tasks_data = await asyncio.to_thread(
+            orchestrator.process_voice_note, file_path, correlation_id,
+            image_path, image_mime)
 
         # Auto-approved tasks execute in the background: a grounded research call
         # is ~19s and runs per task, so executing inline would make this response
@@ -85,8 +98,9 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
     except Exception as e:
         return {"error": "Failed to process audio", "raw": str(e)}
     finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        for p in (file_path, image_path):
+            if p and os.path.exists(p):
+                os.remove(p)
 
 @app.get("/api/tasks")
 def get_tasks():

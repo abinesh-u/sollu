@@ -11,21 +11,32 @@ class TaskOrchestrator:
         self.parser = parser
         self.trust_engine = TrustLadderEngine(db)
 
-    def process_voice_note(self, audio_path: str, correlation_id: str) -> dict:
-        """End-to-end pipeline: read audio, parse tasks, apply trust ladder, persist."""
+    def process_voice_note(self, audio_path: str, correlation_id: str,
+                           image_path: str = None, image_mime: str = None) -> dict:
+        """End-to-end pipeline: read audio, parse tasks, apply trust ladder, persist.
+
+        An optional image is sent in the same Gemini request as the audio.
+        """
         mime = "audio/wav" if audio_path.endswith(".wav") else "audio/mp3"
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
 
+        image_bytes = None
+        if image_path:
+            with open(image_path, "rb") as f:
+                image_bytes = f.read()
+
         start_time = time.time()
         # 1. Parse using Gemini
-        tasks_list, token_usage = self.parser.parse_audio(audio_bytes, mime)
+        tasks_list, token_usage = self.parser.parse_audio(
+            audio_bytes, mime, image_bytes=image_bytes, image_mime=image_mime)
         latency = round(time.time() - start_time, 2)
-        
-        log_event(correlation_id, "tasks extracted", 
-            count=len(tasks_list), 
-            token_usage=token_usage, 
-            latency_seconds=latency
+
+        log_event(correlation_id, "tasks extracted",
+            count=len(tasks_list),
+            token_usage=token_usage,
+            latency_seconds=latency,
+            with_image=bool(image_bytes)
         )
         
         saved_tasks = []
@@ -49,6 +60,10 @@ class TaskOrchestrator:
                 "task": task_text,
                 "lane": task_lane,
                 "class": task_class,
+                # Only meaningful when an image rode along; audio-only notes
+                # record "audio" with no evidence.
+                "source": task_item.get("source", "audio"),
+                "evidence": task_item.get("evidence") or None,
                 "status": status,
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "usage": token_usage,

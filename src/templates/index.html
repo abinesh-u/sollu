@@ -204,6 +204,46 @@
 
         input[type="file"] { display: none; }
 
+        /* Optional image slot. Sits inside the existing upload card — the image
+           rides in the same request as the audio, so it gets no screen of its
+           own and no separate submit. */
+        .image-slot {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .image-slot .eyebrow { color: var(--color-charcoal); }
+
+        .btn-clear {
+            font-family: var(--font-ui);
+            font-size: var(--text-caption);
+            font-weight: 500;
+            letter-spacing: 0.72px;
+            text-transform: uppercase;
+            background: none;
+            border: none;
+            border-bottom: 1px solid var(--color-charcoal);
+            color: var(--color-charcoal);
+            padding: 0 0 1px;
+            cursor: pointer;
+        }
+
+        /* Evidence read from the attached image. */
+        .evidence {
+            margin-top: 16px;
+            background-color: var(--color-paper-white);
+            border: 1px solid var(--color-deep-forest);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-size: var(--text-body-sm);
+            line-height: 1.44;
+        }
+
+        .evidence .eyebrow { margin-bottom: 4px; }
+
         /* ── Buttons: 4px radius, 12px/20px padding, Graphik 16px weight 500 ── */
         .btn {
             display: inline-block;
@@ -549,6 +589,12 @@
                         <input type="file" id="file-input" accept="audio/*">
                         <p>or drop a .wav / .mp3 file here</p>
                     </div>
+                    <div class="image-slot">
+                        <label class="btn btn-ghost" for="image-input" id="image-label">Add an image</label>
+                        <input type="file" id="image-input" accept="image/*">
+                        <span class="eyebrow" id="image-name">Optional · sent with the note in one request</span>
+                        <button class="btn-clear" id="image-clear" hidden>Clear</button>
+                    </div>
                 </section>
 
                 <h2 class="section-title">Activity &amp; tasks</h2>
@@ -654,6 +700,19 @@
             message_person: 'Draft only — not sent',
             make_call: 'Script only — no call placed'
         };
+
+        // Shown only when an image actually contributed something. Audio-only
+        // notes carry source='audio' and no evidence, and render nothing here.
+        function renderEvidence(task) {
+            if (!task.evidence) return '';
+            const src = task.source === 'both' ? 'Audio + image' : 'Image';
+            return `
+                <div class="evidence">
+                    <div class="eyebrow">${esc(src)} · read from the image</div>
+                    <div>${esc(task.evidence)}</div>
+                </div>
+            `;
+        }
 
         function renderArtifact(task) {
             const state = task.execution_status;
@@ -777,6 +836,7 @@
                         <div class="eyebrow">${esc(fmtTime(task.created_at))}</div>
                     </div>
                     ${deferredHtml}
+                    ${renderEvidence(task)}
                     ${renderArtifact(task)}
                     ${actionsHtml}
                 `;
@@ -789,6 +849,21 @@
         const fileLabel = document.getElementById('file-label');
         const dropzone = document.getElementById('dropzone');
         const uploadStatus = document.getElementById('upload-status');
+        const imageInput = document.getElementById('image-input');
+        const imageName = document.getElementById('image-name');
+        const imageClear = document.getElementById('image-clear');
+
+        function renderImageSlot() {
+            const f = imageInput.files[0];
+            imageName.textContent = f ? f.name : 'Optional · sent with the note in one request';
+            imageClear.hidden = !f;
+        }
+
+        imageInput.addEventListener('change', renderImageSlot);
+        imageClear.addEventListener('click', () => {
+            imageInput.value = '';
+            renderImageSlot();
+        });
 
         async function uploadFile(file) {
             if (!file) return;
@@ -799,6 +874,8 @@
 
             const body = new FormData();
             body.append('file', file);
+            // Same request as the audio — one call, one triage decision.
+            if (imageInput.files[0]) body.append('image', imageInput.files[0]);
 
             try {
                 const res = await fetch('/tasks', { method: 'POST', body });
@@ -822,6 +899,9 @@
             } finally {
                 fileLabel.removeAttribute('aria-disabled');
                 fileInput.value = '';
+                // Don't let an image silently ride along with the next note.
+                imageInput.value = '';
+                renderImageSlot();
             }
         }
 

@@ -28,7 +28,9 @@ class GeminiAudioParser:
                             "lane": {"type": "string", "enum": ["now", "next", "later"]},
                             "class": {"type": "string", "enum": ["message_person", "make_call", "research", "watch_price", "other"]},
                             "condition": {"type": "string", "description": "The specific condition to monitor for 'later' lane tasks (e.g., 'price drops below 15000')"},
-                            "defer_duration_minutes": {"type": "integer", "description": "How many minutes to defer checking this condition"}
+                            "defer_duration_minutes": {"type": "integer", "description": "How many minutes to defer checking this condition"},
+                            "source": {"type": "string", "enum": ["audio", "image", "both"], "description": "Where this task came from. 'audio' when the speaker stated it and the image added nothing."},
+                            "evidence": {"type": "string", "description": "The specific detail read from the attached image that supports this task. Empty when no image was attached or the image says nothing about this task."}
                         },
                         "required": ["task", "lane", "class"],
                     },
@@ -37,10 +39,21 @@ class GeminiAudioParser:
             "required": ["tasks"],
         }
 
-    def parse_audio(self, audio_bytes: bytes, mime_type: str = "audio/wav") -> tuple[list, dict]:
-        """Parses audio bytes into structured tasks and returns token usage."""
+    def parse_audio(self, audio_bytes: bytes, mime_type: str = "audio/wav",
+                    image_bytes: bytes = None, image_mime: str = None) -> tuple[list, dict]:
+        """Parses audio bytes into structured tasks and returns token usage.
+
+        An optional image rides in the SAME request as a second content part —
+        one call, one triage decision. The image is supporting evidence for what
+        the speaker said, not a second source of tasks.
+        """
         audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
-        
+
+        parts = [audio_part]
+        if image_bytes:
+            parts.append(types.Part.from_bytes(
+                data=image_bytes, mime_type=image_mime or "image/jpeg"))
+
         resp = self.client.models.generate_content(
             model="gemini-3.5-flash",
             contents=[
@@ -56,8 +69,20 @@ class GeminiAudioParser:
                 "Price watches, drop alerts, and 'check if X happens' requests are lane=later. "
                 "Assign a 'class' to each task from: message_person, make_call, research, watch_price, other. "
                 "For lane='later' tasks, set 'condition' to the specific thing to watch for. "
-                "If the speaker is not committing to action, return {\"tasks\": []}.",
-                audio_part,
+                "If the speaker is not committing to action, return {\"tasks\": []}. "
+                # Image handling. Deliberately narrow: the image supports the
+                # spoken tasks, it does not introduce new ones. Widening this to
+                # 'extract tasks from the image too' makes the note and the
+                # picture compete, and the lane assignments get noisy.
+                "An image may be attached alongside the audio. It is supporting evidence "
+                "for what the speaker said, NOT a second source of tasks — do not invent "
+                "tasks that the speaker did not commit to. When the image contains a "
+                "detail that bears on a task, set 'source' to 'both' and set 'evidence' "
+                "to the detail that would actually change the decision — prefer the "
+                "concrete number, price, date or deadline you read over a general label "
+                "or a route. Quote it as it appears. "
+                "Otherwise set 'source' to 'audio' and leave 'evidence' empty.",
+                *parts,
             ],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
