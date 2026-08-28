@@ -211,6 +211,13 @@
             gap: 16px;
         }
 
+        /* A class selector setting `display` outranks the UA's
+           [hidden] { display: none }, so the attribute silently stops working
+           and the indicator shows on a page that is not recording. Every
+           display-setting rule that pairs with `hidden` needs this. */
+        .rec-state[hidden],
+        .btn-clear[hidden] { display: none; }
+
         .rec-state {
             display: inline-flex;
             align-items: center;
