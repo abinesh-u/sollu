@@ -38,4 +38,5 @@ class ExecutionResult:
     usage: dict = field(default_factory=dict)
     elapsed_seconds: float = 0.0
     search_queries: list[str] = field(default_factory=list)
+    sources: list[str] = field(default_factory=list)
     error: str | None = None

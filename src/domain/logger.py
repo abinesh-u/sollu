@@ -1,5 +1,4 @@
 import json
-import sys
 
 def log_event(correlation_id: str, event: str, **kwargs):
     """

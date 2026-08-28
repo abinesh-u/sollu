@@ -424,7 +424,14 @@
             padding: 12px 16px;
             font-size: var(--text-body-sm);
             line-height: 1.44;
+        }
+
+        /* pre-wrap lives here, not on .artifact — on the wrapper it would also
+           preserve the template literal's own indentation as a visible indent.
+           overflow-wrap keeps a long unbroken token from widening the card. */
+        .artifact-body {
             white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
         .artifact .eyebrow { margin-bottom: 6px; }
@@ -695,14 +702,20 @@
                 tags.push(`<span class="artifact-tag">${esc(String(secs))}s</span>`);
             }
 
+            (task.sources || []).slice(0, 4).forEach(s => {
+                tags.push(`<span class="artifact-tag">${esc(s)}</span>`);
+            });
+
             const heading = state === 'draft_ready' ? 'Draft' : 'Result';
 
             // task.artifact is model-generated prose going into innerHTML — esc() is
-            // load-bearing here, not decorative.
+            // load-bearing here, not decorative. It sits in its own element with no
+            // template indentation: the body is white-space: pre-wrap, so any leading
+            // whitespace in this literal would render as a visible indent.
             return `
                 <div class="artifact">
                     <div class="eyebrow">${heading}</div>
-                    ${esc(task.artifact)}
+                    <div class="artifact-body">${esc(task.artifact)}</div>
                     ${tags.length ? `<div class="artifact-tags">${tags.join('')}</div>` : ''}
                 </div>
             `;

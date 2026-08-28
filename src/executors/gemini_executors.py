@@ -60,7 +60,6 @@ RESEARCH_SCHEMA = {
     "type": "object",
     "properties": {
         "finding": {"type": "string", "description": "Two or three sentences answering the task."},
-        "sources": {"type": "array", "items": {"type": "string"}},
     },
     "required": ["finding"],
 }
@@ -92,18 +91,22 @@ class ResearchExecutor:
 
         # Grounding is read off the metadata, never inferred from the prose.
         queries: list[str] = []
+        sources: list[str] = []
         chunks = 0
         if resp.candidates:
             gm = resp.candidates[0].grounding_metadata
             if gm:
                 queries = list(gm.web_search_queries or [])
-                chunks = len(gm.grounding_chunks or [])
+                for c in (gm.grounding_chunks or []):
+                    chunks += 1
+                    web = getattr(c, "web", None)
+                    # Publisher name, not the vertexaisearch redirect URI those
+                    # carry -- those are unreadable and swamp the finding.
+                    name = getattr(web, "domain", None) or getattr(web, "title", None)
+                    if name and name not in sources:
+                        sources.append(name)
 
-        parsed = json.loads(resp.text)
-        finding = parsed.get("finding", "").strip()
-        sources = parsed.get("sources") or []
-        if sources:
-            finding = f"{finding}\n\nSources: " + ", ".join(sources[:3])
+        finding = json.loads(resp.text).get("finding", "").strip()
 
         return ExecutionResult(
             artifact=finding,
@@ -113,6 +116,7 @@ class ResearchExecutor:
             usage=_usage(resp),
             elapsed_seconds=round(elapsed, 2),
             search_queries=queries,
+            sources=sources[:4],
         )
 
 
