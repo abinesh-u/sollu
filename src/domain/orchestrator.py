@@ -5,6 +5,33 @@ from src.domain.parser import GeminiAudioParser
 from src.domain.trust_ladder import TrustLadderEngine
 from src.domain.logger import log_event
 
+# Verified against gemini-3.5-flash: audio/webm, audio/ogg, audio/mp4 and
+# audio/wav all parse, with or without a ";codecs=opus" suffix. video/webm is
+# rejected with a 400 -- and MediaRecorder blobs are easy to label that way, so
+# the video/* prefix is rewritten rather than passed through.
+_EXT_MIME = {
+    ".wav": "audio/wav",
+    ".mp3": "audio/mp3",
+    ".m4a": "audio/mp4",
+    ".ogg": "audio/ogg",
+    ".webm": "audio/webm",
+}
+
+
+def normalise_audio_mime(declared: str, path: str) -> str:
+    """Prefer what the upload declared; fall back to the extension."""
+    if declared:
+        m = declared.strip()
+        if m.startswith("video/"):
+            m = "audio/" + m.split("/", 1)[1]
+        if m.startswith("audio/"):
+            return m
+    for ext, mime in _EXT_MIME.items():
+        if path.lower().endswith(ext):
+            return mime
+    return "audio/wav"
+
+
 class TaskOrchestrator:
     def __init__(self, db: firestore.Client, parser: GeminiAudioParser):
         self.db = db
@@ -12,12 +39,15 @@ class TaskOrchestrator:
         self.trust_engine = TrustLadderEngine(db)
 
     def process_voice_note(self, audio_path: str, correlation_id: str,
-                           image_path: str = None, image_mime: str = None) -> dict:
+                           image_path: str = None, image_mime: str = None,
+                           audio_mime: str = None) -> dict:
         """End-to-end pipeline: read audio, parse tasks, apply trust ladder, persist.
 
         An optional image is sent in the same Gemini request as the audio.
+        `audio_mime` comes from the upload; a browser recording is not a .wav or
+        an .mp3 and must not be guessed at from its filename.
         """
-        mime = "audio/wav" if audio_path.endswith(".wav") else "audio/mp3"
+        mime = normalise_audio_mime(audio_mime, audio_path)
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
 

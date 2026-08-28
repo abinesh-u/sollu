@@ -55,8 +55,12 @@ def health_check():
 async def process_audio(background: BackgroundTasks, file: UploadFile = File(...),
                         image: UploadFile = File(None)):
     correlation_id = str(uuid.uuid4())
-    # Save the uploaded file temporarily
-    file_path = f"/tmp/{file.filename}"
+    # Save the uploaded file temporarily. The name is generated, not taken from
+    # the upload: a MediaRecorder blob has no meaningful filename, and an
+    # attacker-supplied one has no business reaching the filesystem.
+    audio_mime = file.content_type
+    ext = os.path.splitext(file.filename or "")[1][:8] or ".audio"
+    file_path = f"/tmp/{correlation_id}{ext}"
     with open(file_path, "wb") as f:
         file_bytes = await file.read()
         f.write(file_bytes)
@@ -71,13 +75,13 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
             f.write(await image.read())
 
     log_event(correlation_id, "note received", size_bytes=len(file_bytes),
-              with_image=bool(image_path))
+              mime=audio_mime, with_image=bool(image_path))
 
     try:
         # Run orchestrator synchronously in thread pool
         tasks_data = await asyncio.to_thread(
             orchestrator.process_voice_note, file_path, correlation_id,
-            image_path, image_mime)
+            image_path, image_mime, audio_mime)
 
         # Auto-approved tasks execute in the background: a grounded research call
         # is ~19s and runs per task, so executing inline would make this response
