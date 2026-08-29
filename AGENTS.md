@@ -30,7 +30,7 @@ not for elegance.
 | Service account | `voice-agent@sixth-radar-506906-i1.iam.gserviceaccount.com` |
 | Package manager | `uv` |
 | Deploy | Cloud Run buildpack via `--source .`, no Dockerfile |
-| Thinking budget | `0` for triage (verified: correct output, 3.2s p50) |
+| Thinking budget | `0` for triage (verified: correct output; see Latency) |
 | Auto-execute threshold | 3 approvals |
 
 Why the global endpoint: Gemini 3.5 Flash is offered in asia-south1 only as Single
@@ -105,7 +105,7 @@ It gates on **count + lane + class**. Verbatim task text and array order vary ru
 to run even at `temperature=0`; nothing downstream consumes the wording, so an
 exact-string gate would fail on an unchanged codebase and tell you nothing.
 
-Current expected shape, 9/9 stable:
+Current expected shape, 5/5 stable (re-verified 29 Aug against the deployed refactor):
 
 ```
 now   / message_person    now  / make_call
@@ -115,6 +115,23 @@ next  / research          later / watch_price
 Keep this script pointed at the production parser. An earlier version carried its
 own client, prompt, and schema, drifted from the real prompt, and certified a
 lane assignment that production did not produce.
+
+## Latency — quote the deployed number
+
+Measured 29 Aug 2026, after the repository refactor:
+
+| Path | Median | Range |
+|---|---|---|
+| `parse_audio` locally (the gate) | 4.2s | 3.8s – 80s |
+| `POST /tasks` end to end on Cloud Run | 6.5s | 5.2s – 6.8s |
+
+The demo runs on Cloud Run, so **6.5s is the number to say out loud** — it covers
+the upload, the model call, four Firestore writes and the ladder reads. An earlier
+3.2s figure measured only the local parse and no longer reproduces.
+
+The 80s local outlier is this machine, not the model: Cloud Run showed no outlier
+across four consecutive uploads. See the IPv6 note under Deploying. Do not chase a
+slow local call as a model regression before ruling that out.
 
 ## Look at the rendered page
 
@@ -171,7 +188,8 @@ advertises IPv6 with no route to Google, which makes Python and gcloud block for
 minutes on the first connection while curl shrugs it off via happy-eyeballs.
 `networksetup -setv6off Wi-Fi` fixes it locally; Cloud Shell sidesteps it.
 
-Set `--min-instances=1` for the demo window: auto-approved tasks execute in a
+`--min-instances=1` is set as of 29 Aug 2026 and must go back to 0 after the
+demo window. It matters because: auto-approved tasks execute in a
 background task after the response, and a scaled-down instance loses that work
 silently.
 
