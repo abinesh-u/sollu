@@ -1,30 +1,32 @@
+"""HTTP routing adapter — deliberately shallow.
+
+Translates HTTP requests into domain calls on TaskOrchestrator and
+TaskRepository. No Firestore field names, no trust-ladder logic, no executor
+dispatch. Those live behind the orchestrator seam.
+"""
 import os
-import json
 import asyncio
 import uuid
-import time
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse, Response
 from google.cloud import firestore
 from dotenv import dotenv_values
-from datetime import datetime, timezone
 
 from src.domain.parser import GeminiAudioParser
 from src.domain.trust_ladder import TrustLadderEngine
 from src.domain.orchestrator import TaskOrchestrator
+from src.domain.task_repo import TaskRepository
 from src.domain.logger import log_event
-from src.domain.evaluator import ConditionEvaluator
+from src.domain.executor_runner import run_auto_approved
+from src.domain import speaker
 from src.executors.registry import KNOWN_CLASSES, describe
 from src.executors.gemini_executors import warm_up
-from src.domain.executor_runner import run_for_task, run_auto_approved
-from src.domain import speaker
 
 cfg = dotenv_values(".env")
 db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
 
-trust_engine = TrustLadderEngine(db)
-orchestrator = TaskOrchestrator(db, GeminiAudioParser())
-evaluator = ConditionEvaluator()
+repo = TaskRepository(db)
+orchestrator = TaskOrchestrator(repo, GeminiAudioParser())
 
 app = FastAPI(title="Voice Agent API")
 
@@ -131,16 +133,7 @@ def speak_summary(payload: dict):
 
 @app.get("/api/tasks")
 def get_tasks():
-    tasks = []
-    # Fetch tasks, ordered by created_at descending
-    docs = db.collection("tasks").order_by("created_at", direction=firestore.Query.DESCENDING).limit(50).stream()
-    for doc in docs:
-        t = doc.to_dict()
-        t["id"] = doc.id
-        if "created_at" in t and hasattr(t["created_at"], "isoformat"):
-            t["created_at"] = t["created_at"].isoformat()
-        tasks.append(t)
-    return tasks
+    return repo.list_recent()
 
 def _read_ladder() -> dict:
     """Approval count per class, with every known class present at zero.
@@ -172,90 +165,21 @@ def get_classes():
 
 @app.post("/api/tasks/{task_id}/approve")
 def approve_task(task_id: str):
-    # Using task_id as correlation_id for approve/reject actions since they happen out of band
-    correlation_id = task_id 
-    
-    doc_ref = db.collection("tasks").document(task_id)
-    doc = doc_ref.get()
-    if not doc.exists:
+    try:
+        return orchestrator.approve(task_id)
+    except ValueError:
         raise HTTPException(status_code=404, detail="Task not found")
-    
-    data = doc.to_dict()
-    execution = None
-    if data.get("status") == "pending_approval":
-        # Update task status
-        doc_ref.update({"status": "approved"})
-        # Increment trust ladder
-        task_class = data.get("class", "other")
-        trust_engine.record_approval(task_class, correlation_id)
-
-        # Approval is what earns execution — run it now. The UI already re-polls,
-        # so the extra seconds here are acceptable on the manual path.
-        execution = run_for_task(db, task_id, data, data.get("correlation_id", correlation_id))
-
-    return {"status": "ok", "execution": execution}
 
 @app.post("/api/tasks/{task_id}/reject")
 def reject_task(task_id: str):
-    correlation_id = task_id
-    doc_ref = db.collection("tasks").document(task_id)
-    doc = doc_ref.get()
-    if not doc.exists:
+    try:
+        return orchestrator.reject(task_id)
+    except ValueError:
         raise HTTPException(status_code=404, detail="Task not found")
-        
-    data = doc.to_dict()
-    doc_ref.update({"status": "rejected"})
-    
-    # If rejecting an auto-executed task, reset the ladder (demotion signal)
-    if data.get("status") == "auto_approved":
-        task_class = data.get("class", "other")
-        trust_engine.record_demotion(task_class, correlation_id)
-        
-    return {"status": "ok"}
 
 @app.post("/api/cron/deferred")
 def process_deferred_tasks(_=Depends(verify_cron_secret)):
-    correlation_id = str(uuid.uuid4())
-    now_ts = datetime.now(timezone.utc).timestamp()
-    
-    # Query tasks in 'later' lane
-    docs = db.collection("tasks").where("lane", "==", "later").stream()
-    
-    results = []
-    for doc in docs:
-        data = doc.to_dict()
-        check_after = data.get("check_after", 0)
-        
-        # In-memory filter to avoid composite index requirement
-        if check_after > now_ts:
-            continue
-            
-        condition = data.get("condition", "")
-        
-        is_met = evaluator.evaluate(condition)
-        
-        if is_met:
-            db.collection("tasks").document(doc.id).update({"lane": "next"})
-            log_event(correlation_id, "deferred wake fired", 
-                task=data.get("task"), 
-                old_state="later", 
-                new_state="promoted_to_next",
-                trigger="condition_met"
-            )
-            results.append({"id": doc.id, "action": "promoted"})
-        else:
-            # Re-defer for another 5 minutes
-            new_check_after = now_ts + (5 * 60)
-            db.collection("tasks").document(doc.id).update({"check_after": new_check_after})
-            log_event(correlation_id, "deferred wake fired", 
-                task=data.get("task"), 
-                old_state="later", 
-                new_state="re-deferred",
-                trigger="condition_not_met"
-            )
-            results.append({"id": doc.id, "action": "re-deferred"})
-            
-    return {"status": "ok", "processed": len(results), "results": results}
+    return orchestrator.evaluate_deferred()
 
 @app.get("/", response_class=HTMLResponse)
 def get_ui():

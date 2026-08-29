@@ -1,4 +1,5 @@
 import json
+import uuid
 from google.cloud import firestore
 from dotenv import dotenv_values
 from google.adk.agents.base_agent import BaseAgent
@@ -9,16 +10,18 @@ import re
 
 from src.domain.parser import GeminiAudioParser
 from src.domain.orchestrator import TaskOrchestrator
+from src.domain.task_repo import TaskRepository
 
 cfg = dotenv_values(".env")
 db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
 parser = GeminiAudioParser()
-orchestrator = TaskOrchestrator(db, parser)
+orchestrator = TaskOrchestrator(TaskRepository(db), parser)
 
 def extract_tasks_from_audio(audio_path: str) -> dict:
     """Extracts action items from an audio file and assigns lanes and classes."""
+    correlation_id = str(uuid.uuid4())
     print(f"[TOOL] extract_tasks_from_audio invoked with {audio_path}")
-    return orchestrator.process_voice_note(audio_path)
+    return orchestrator.process_voice_note(audio_path, correlation_id)
 
 extract_tool = FunctionTool(extract_tasks_from_audio)
 

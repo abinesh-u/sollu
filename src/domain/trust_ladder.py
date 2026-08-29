@@ -7,11 +7,18 @@ class TrustLadderEngine:
     def __init__(self, db: firestore.Client):
         self.db = db
 
+    def _read_approvals(self, task_class: str) -> int:
+        """Read the current approval count for a task class.
+
+        Single source for the pre-operation read so record_approval and
+        record_demotion cannot diverge on how they fetch existing state.
+        """
+        doc = self.db.collection("trust_ladder").document(task_class).get()
+        return doc.to_dict().get("approvals", 0) if doc.exists else 0
+
     def get_status_for_task(self, task_class: str, correlation_id: str) -> str:
         """Determines the status of a new task based on current trust ladder state."""
-        ladder_ref = self.db.collection("trust_ladder").document(task_class)
-        ladder_doc = ladder_ref.get()
-        approvals = ladder_doc.to_dict().get("approvals", 0) if ladder_doc.exists else 0
+        approvals = self._read_approvals(task_class)
         
         status = "auto_approved" if approvals >= self.AUTO_EXECUTE_THRESHOLD else "pending_approval"
         
@@ -27,15 +34,13 @@ class TrustLadderEngine:
         """Atomically increments the approval count and handles threshold crossing."""
         ladder_ref = self.db.collection("trust_ladder").document(task_class)
         
-        # Read old state for logging
-        old_doc = ladder_ref.get()
-        old_approvals = old_doc.to_dict().get("approvals", 0) if old_doc.exists else 0
+        old_approvals = self._read_approvals(task_class)
         
         ladder_ref.set({"approvals": firestore.Increment(1)}, merge=True)
         
-        # Check if this increment pushed it across the threshold to log promotion event
-        updated_ladder = ladder_ref.get().to_dict()
-        new_approvals = updated_ladder.get("approvals", 0)
+        # The increment is +1, so the new count is deterministic without a
+        # second round-trip read.
+        new_approvals = old_approvals + 1
         
         if old_approvals < self.AUTO_EXECUTE_THRESHOLD and new_approvals >= self.AUTO_EXECUTE_THRESHOLD:
             self.db.collection("promotion_events").add({
@@ -52,12 +57,10 @@ class TrustLadderEngine:
 
     def record_demotion(self, task_class: str, correlation_id: str):
         """Demotes a task class by resetting its approval count to 0."""
-        # Read old state for logging
-        ladder_ref = self.db.collection("trust_ladder").document(task_class)
-        old_doc = ladder_ref.get()
-        old_approvals = old_doc.to_dict().get("approvals", 0) if old_doc.exists else 0
+        old_approvals = self._read_approvals(task_class)
         
-        ladder_ref.set({"approvals": 0}, merge=True)
+        self.db.collection("trust_ladder").document(task_class).set(
+            {"approvals": 0}, merge=True)
         
         if old_approvals >= self.AUTO_EXECUTE_THRESHOLD:
             log_event(correlation_id, "demotion",
