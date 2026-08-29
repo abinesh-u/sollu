@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Header } from './components/Header';
 import { AudioInputBar } from './components/AudioInputBar';
 import { LanesBoard } from './components/LanesBoard';
 import { TrustLadderMatrix } from './components/TrustLadderMatrix';
@@ -107,14 +106,6 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#eef2e3] text-[#043f2e] selection:bg-[#c8f169] selection:text-[#000000]">
       
-      {/* Header */}
-      <Header
-        speakOn={speakOn}
-        onToggleSpeak={toggleSpeak}
-        onOpenLadderModal={handleOpenLadderModal}
-        taskCount={tasks.length}
-      />
-
       {/* Main Container - 1200px max-width per DESIGN.md */}
       <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-8 space-y-16">
         
