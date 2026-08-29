@@ -124,12 +124,22 @@ export const App: React.FC = () => {
       {/* Main Container - 1200px max-width per DESIGN.md */}
       <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
         
-        {/* Top: Audio Input & Errand Recorder */}
-        <section>
-          <AudioInputBar
-            onProcessAudio={handleProcessAudio}
-            isProcessing={isProcessing}
-          />
+        {/* Top: Asymmetric Mid Editorial Hero */}
+        <section className="flex flex-col lg:flex-row gap-12 lg:gap-24 pt-8 pb-16 items-center">
+          <div className="flex-1 space-y-6">
+            <h1 className="text-[64px] sm:text-[96px] font-serif text-[#043f2e] tracking-tighter leading-none mb-12">
+              Sollu<span className="text-[#c8f169] text-6xl">°</span>
+            </h1>
+            <p className="text-3xl sm:text-5xl font-serif text-[#043f2e] tracking-tight leading-[1.1] max-w-[15ch]">
+              Capture moments. Quietly. Express effortlessly with intuitive voice notes.
+            </p>
+          </div>
+          <div className="w-full lg:w-[420px] shrink-0">
+            <AudioInputBar
+              onProcessAudio={handleProcessAudio}
+              isProcessing={isProcessing}
+            />
+          </div>
         </section>
 
         {/* Middle: 3-Lane Kanban (Now, Next, Later) */}
