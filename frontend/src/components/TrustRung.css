@@ -1,0 +1,20 @@
+.trust-rung-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 6px; /* slightly thinner */
+  width: 100%;
+}
+
+.trust-rung-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: var(--radius-badges);
+  background-color: rgba(255, 255, 255, 0.1); /* Dark mode compatible empty */
+  border: none;
+  transition: background-color var(--t-slow) var(--ease);
+}
+
+.trust-rung-segment.is-active {
+  background-color: var(--color-chartreuse); /* High contrast active */
+}

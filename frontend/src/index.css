@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=Figtree:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Colors */
+  --color-chartreuse: #c8f169;
+  --color-forest-ink: #034f46;
+  --color-ember-glow: #ffa946;
+  --color-vast-ink: #1a1a1a;
+  --color-pale-sage: #eef2e3;
+  --color-sage-stone: #dde4d8;
+  --color-fog: #8a8a80;
+  --color-charcoal: #222222;
+  --color-pure-white: #ffffff;
+
+  /* Typography — Font Families */
+  --font-eb-garamond: 'EB Garamond', ui-serif, serif;
+  --font-figtree: 'Figtree', ui-sans-serif, sans-serif;
+
+  /* Typography — Scale */
+  --text-caption: 14px;
+  --leading-caption: 1.3;
+  --text-body-sm: 16px;
+  --leading-body-sm: 1.3;
+  --text-body: 20px;
+  --leading-body: 1.3;
+  --text-subheading: 24px;
+  --leading-subheading: 1.3;
+  --text-heading-sm: 32px;
+  --leading-heading-sm: 1.3;
+  --tracking-heading-sm: -0.96px;
+  --text-heading: 48px;
+  --leading-heading: 0.95;
+  --text-heading-lg: 64px;
+  --leading-heading-lg: 0.95;
+  --tracking-heading-lg: -1.92px;
+  --text-display: 120px;
+  --leading-display: 0.85;
+  --tracking-display: -3.6px;
+
+  /* Spacing */
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-56: 56px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+  --spacing-104: 104px;
+  --spacing-128: 128px;
+  --spacing-168: 168px;
+
+  /* Border Radius */
+  --radius-inputs: 12px;
+  --radius-buttons: 12px;
+  --radius-cards: 32px;
+  --radius-badges: 9999px;
+  --radius-sections: 60px; /* 40-80px range */
+
+  /* Motion */
+  --t-fast: 120ms;
+  --ease: cubic-bezier(0.2, 0.6, 0.3, 1);
+}
+
+/* Base Reset */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-figtree);
+  background-color: var(--color-pale-sage);
+  color: var(--color-vast-ink);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-body-sm);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-eb-garamond);
+  font-weight: 400;
+  color: inherit;
+}
+
+.font-display {
+  font-family: var(--font-eb-garamond);
+  font-weight: 400;
+}
+
+/* Buttons */
+button {
+  font-family: var(--font-figtree);
+  border: none;
+  cursor: pointer;
+  background: none;
+  border-radius: var(--radius-buttons);
+  transition: all var(--t-fast) var(--ease);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-vast-ink);
+  outline-offset: 2px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  border-radius: var(--radius-buttons);
+  line-height: var(--leading-body-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Primary CTA Button: Fill: #c8f169. Text: #1a1a1a. Border: 2px solid #1a1a1a. */
+.btn-primary {
+  background-color: var(--color-chartreuse);
+  color: var(--color-vast-ink);
+  border: 2px solid var(--color-vast-ink);
+  padding: var(--spacing-16) var(--spacing-24);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #b5df4a;
+}
+
+/* Outlined Secondary Button: Fill: #eef2e3. Text: #1a1a1a. Border: 2px solid #1a1a1a. */
+.btn-secondary {
+  background-color: var(--color-pale-sage);
+  color: var(--color-vast-ink);
+  border: 2px solid var(--color-vast-ink);
+  padding: var(--spacing-16) var(--spacing-24);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-sage-stone);
+}
+
+/* Ghost Button: No background. Text: #1a1a1a. No border. Underline on hover. */
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-vast-ink);
+  border: 1px solid transparent;
+  padding: var(--spacing-8) var(--spacing-16);
+  font-weight: 400;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-inverse {
+  background-color: var(--color-pale-sage);
+  color: var(--color-vast-ink);
+  border: 2px solid var(--color-vast-ink);
+  padding: var(--spacing-16) var(--spacing-24);
+}
+.dark-chamber .btn-inverse {
+  border-color: var(--color-pale-sage);
+}
+
+.btn-icon {
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--spacing-8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-buttons);
+}
+
+/* Cards */
+.card-base {
+  background-color: var(--color-pale-sage);
+  border-radius: var(--radius-cards);
+  padding: var(--spacing-32);
+  border: 2px solid var(--color-vast-ink);
+  box-shadow: none;
+}
+
+.dark-chamber .card-base {
+  background-color: var(--color-vast-ink);
+  border: 2px solid var(--color-vast-ink);
+  color: var(--color-pale-sage);
+}
+
+/* Utilities */
+.hidden { display: none !important; }
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }

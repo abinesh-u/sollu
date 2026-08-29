@@ -1,0 +1,298 @@
+.task-card {
+  background-color: var(--color-pale-sage);
+  border-radius: var(--radius-cards);
+  padding: var(--spacing-32);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  position: relative;
+  border: 2px solid var(--color-vast-ink);
+  color: var(--color-vast-ink);
+  transition: transform var(--t-fast) var(--ease);
+  min-width: 0;
+}
+
+.task-card.variant-auto {
+  background-color: var(--color-chartreuse);
+}
+
+.task-card.variant-rejected {
+  background-color: var(--color-sage-stone);
+  color: var(--color-charcoal);
+}
+
+.task-card.is-focused {
+  outline: 4px solid var(--color-pure-white);
+  outline-offset: 4px;
+}
+
+/* Card Header: class chip + status badge */
+.task-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8);
+}
+
+.task-class-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: var(--radius-badges);
+  background-color: transparent;
+  border: 2px solid var(--color-vast-ink);
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-vast-ink);
+}
+
+.status-badge {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  padding: 4px 12px;
+  border-radius: var(--radius-badges);
+  text-transform: uppercase;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-auto {
+  background-color: var(--color-pure-white);
+  border: 1px solid var(--color-vast-ink);
+  color: var(--color-vast-ink);
+}
+
+.badge-pending {
+  background-color: var(--color-vast-ink);
+  color: var(--color-pale-sage);
+}
+
+.badge-approved {
+  background-color: var(--color-pure-white);
+  border: 1px solid var(--color-vast-ink);
+  color: var(--color-vast-ink);
+}
+
+.badge-rejected {
+  background-color: var(--color-vast-ink);
+  color: var(--color-pale-sage);
+}
+
+/* Title */
+.task-title {
+  font-family: var(--font-eb-garamond);
+  font-size: var(--text-heading-sm);
+  line-height: var(--leading-heading-sm);
+  font-weight: 400;
+  color: var(--color-vast-ink);
+  overflow-wrap: break-word;
+}
+
+.task-title.text-strike {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* Deferred wake condition */
+.task-condition-block {
+  background-color: var(--color-pure-white);
+  padding: var(--spacing-16);
+  border-radius: var(--radius-inputs);
+  border: 2px solid var(--color-vast-ink);
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  color: var(--color-vast-ink);
+}
+
+.task-condition-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.task-condition-text {
+  color: var(--color-charcoal);
+}
+
+/* Executing indicator */
+.task-executing-block {
+  padding: var(--spacing-16);
+  border-radius: var(--radius-inputs);
+  background-color: var(--color-chartreuse);
+  border: 2px solid var(--color-vast-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  color: var(--color-vast-ink);
+}
+
+.task-executing-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-executing-tag {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Artifact / execution output payload */
+.task-payload {
+  border-radius: var(--radius-inputs);
+  background-color: var(--color-pure-white);
+  border: 2px solid var(--color-vast-ink);
+  overflow: hidden;
+}
+
+.task-payload-header {
+  padding: 8px var(--spacing-16);
+  border-bottom: 2px solid var(--color-vast-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-payload-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-vast-ink);
+}
+
+.task-payload-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-caption);
+  color: var(--color-charcoal);
+  font-weight: 500;
+}
+
+.task-payload-expand:hover {
+  color: var(--color-vast-ink);
+}
+
+.task-payload-body {
+  padding: var(--spacing-16);
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  color: var(--color-vast-ink);
+}
+
+.task-payload-body p.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.task-payload-toggle {
+  margin-top: 8px;
+  font-size: var(--text-caption);
+  color: var(--color-forest-ink);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-payload-toggle:hover {
+  text-decoration: underline;
+}
+
+.task-sources {
+  padding: var(--spacing-8) var(--spacing-16);
+  border-top: 2px solid var(--color-vast-ink);
+  background-color: var(--color-pure-white);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-sources-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  color: var(--color-charcoal);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.task-source-chip {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  padding: 4px 8px;
+  border-radius: var(--radius-badges);
+  background-color: transparent;
+  border: 1px solid var(--color-vast-ink);
+  color: var(--color-vast-ink);
+}
+
+/* Execution error */
+.task-error-block {
+  padding: var(--spacing-16);
+  border-radius: var(--radius-inputs);
+  background-color: var(--color-ember-glow);
+  border: 2px solid var(--color-vast-ink);
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  color: var(--color-vast-ink);
+}
+
+.task-error-title {
+  font-weight: 700;
+}
+
+.task-error-text {
+  font-size: var(--text-caption);
+}
+
+/* Actions */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  padding-top: var(--spacing-8);
+  min-width: 0;
+}
+
+.task-approve-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-approve-btn {
+  flex: 1;
+}
+
+.task-reject-btn {
+  flex: 0 0 auto;
+}
+
+.task-reject-btn.reject-demote {
+  flex: 1;
+  background-color: var(--color-vast-ink);
+  border: 2px solid var(--color-vast-ink);
+  color: var(--color-pale-sage);
+  font-weight: 600;
+  padding: var(--spacing-16) var(--spacing-24);
+}
+
+.task-reject-btn.reject-demote:hover:not(:disabled) {
+  background-color: var(--color-charcoal);
+}

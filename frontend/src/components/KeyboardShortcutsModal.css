@@ -1,0 +1,72 @@
+.shortcuts-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(26, 26, 26, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16);
+}
+
+.shortcuts-card {
+  background-color: var(--color-pale-sage);
+  border: 2px solid var(--color-vast-ink);
+  border-radius: var(--radius-cards);
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+}
+
+.shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-16) var(--spacing-32);
+  border-bottom: 2px solid var(--color-vast-ink);
+  background-color: var(--color-pale-sage);
+}
+
+.shortcuts-title {
+  font-family: var(--font-eb-garamond);
+  font-size: var(--text-heading-sm);
+  color: var(--color-vast-ink);
+  font-weight: 400;
+}
+
+.shortcuts-table {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-16) var(--spacing-32);
+  gap: var(--spacing-16);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-8) 0;
+  border-bottom: 1px solid var(--color-sage-stone);
+}
+
+.shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.shortcut-desc {
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  color: var(--color-vast-ink);
+}
+
+.shortcut-key {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  background-color: var(--color-pale-sage);
+  border: 1px solid var(--color-vast-ink);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--color-vast-ink);
+}

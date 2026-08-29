@@ -1,0 +1,228 @@
+.trust-ladder-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-32);
+  /* Removed border and background */
+}
+
+.ladder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-16);
+  flex-wrap: wrap;
+  padding-bottom: var(--spacing-16);
+  border-bottom: 1px solid rgba(28, 28, 26, 0.15); /* Softer line */
+}
+
+.ladder-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-16);
+}
+
+.ladder-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-badges);
+  background-color: var(--color-pure-white);
+  border: 1px solid rgba(28, 28, 26, 0.15);
+  color: var(--color-vast-ink);
+  flex-shrink: 0;
+}
+
+.ladder-heading {
+  font-family: var(--font-eb-garamond);
+  font-size: var(--text-heading-sm);
+  font-weight: 400;
+  color: var(--color-vast-ink);
+}
+
+.ladder-subtitle {
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  color: var(--color-charcoal);
+  max-width: 56ch;
+}
+
+.ladder-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-16);
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-charcoal);
+}
+
+.legend-item-strong {
+  color: var(--color-vast-ink);
+  font-weight: 600;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.dot-muted {
+  background-color: transparent;
+  border: 2px solid var(--color-vast-ink);
+}
+
+.dot-lime {
+  background-color: var(--color-chartreuse);
+  border: 2px solid var(--color-chartreuse);
+}
+
+/* Horizontal Carousel Layout */
+.ladder-carousel-wrapper {
+  position: relative;
+  margin: 0 calc(var(--spacing-16) * -1); /* Slight pull out */
+}
+
+.ladder-carousel {
+  display: flex;
+  overflow-x: auto;
+  gap: var(--spacing-24);
+  padding: var(--spacing-16);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ladder-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* HIGH CONTRAST DARK CARDS */
+.ladder-card {
+  flex: 0 0 320px;
+  scroll-snap-align: start;
+  background-color: var(--color-vast-ink);
+  color: var(--color-pale-sage);
+  border-radius: var(--radius-cards);
+  padding: var(--spacing-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.ladder-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+}
+
+.ladder-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-16);
+}
+
+.ladder-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: var(--radius-badges);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-pale-sage);
+  flex-shrink: 0;
+}
+
+.ladder-card-name {
+  font-family: var(--font-figtree);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-pale-sage);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ladder-card-desc {
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-body-sm);
+  color: var(--color-sage-stone);
+  opacity: 0.8;
+  flex-grow: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ladder-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  margin-top: auto;
+  padding-top: var(--spacing-24);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ladder-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  color: var(--color-sage-stone);
+  opacity: 0.8;
+}
+
+.ladder-progress-row .is-max {
+  color: var(--color-chartreuse);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.ladder-status-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+
+.ladder-status-badge {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  padding: 6px 14px;
+  border-radius: var(--radius-badges);
+  text-transform: uppercase;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.badge-auto {
+  background-color: var(--color-chartreuse);
+  color: var(--color-vast-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+}
+
+.badge-asking {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--color-sage-stone);
+}
+
+@media (max-width: 640px) {
+  .ladder-card {
+    flex: 0 0 280px;
+  }
+}

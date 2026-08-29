@@ -5,10 +5,10 @@ TaskRepository. No Firestore field names, no trust-ladder logic, no executor
 dispatch. Those live behind the orchestrator seam.
 """
 import os
-import asyncio
 import uuid
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends, BackgroundTasks
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from google.cloud import firestore
 from dotenv import dotenv_values
 
@@ -21,6 +21,7 @@ from src.domain.executor_runner import run_auto_approved
 from src.domain import speaker
 from src.executors.registry import KNOWN_CLASSES, describe
 from src.executors.gemini_executors import warm_up
+from src.agent import run_voice_agent
 
 cfg = dotenv_values(".env")
 db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
@@ -81,10 +82,11 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
               mime=audio_mime, with_image=bool(image_path))
 
     try:
-        # Run orchestrator synchronously in thread pool
-        tasks_data = await asyncio.to_thread(
-            orchestrator.process_voice_note, file_path, correlation_id,
-            image_path, image_mime, audio_mime)
+        # Route through the ADK agent (src/agent.py) rather than calling the
+        # orchestrator directly — this is the Google Agent Framework mandatory,
+        # and it must sit on the live request path, not just exist in the repo.
+        tasks_data = await run_voice_agent(
+            file_path, correlation_id, image_path, image_mime, audio_mime)
 
         # Auto-approved tasks execute in the background: a grounded research call
         # is ~19s and runs per task, so executing inline would make this response
@@ -181,8 +183,24 @@ def reject_task(task_id: str):
 def process_deferred_tasks(_=Depends(verify_cron_secret)):
     return orchestrator.evaluate_deferred()
 
+# Mount static assets from built frontend if available
+if os.path.exists("frontend/dist/assets"):
+    app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
+
+@app.get("/favicon.svg")
+def get_favicon():
+    if os.path.exists("frontend/dist/favicon.svg"):
+        return FileResponse("frontend/dist/favicon.svg", media_type="image/svg+xml")
+    if os.path.exists("frontend/public/favicon.svg"):
+        return FileResponse("frontend/public/favicon.svg", media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
 @app.get("/", response_class=HTMLResponse)
+@app.get("/kit", response_class=HTMLResponse)
 def get_ui():
+    if os.path.exists("frontend/dist/index.html"):
+        with open("frontend/dist/index.html", "r") as f:
+            return f.read()
     with open("src/templates/index.html", "r") as f:
         return f.read()
 
