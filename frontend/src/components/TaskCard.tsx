@@ -1,43 +1,38 @@
 import React, { useState } from 'react';
 import type { Task } from '../types';
-import { CLASS_ICONS, CLASS_LABELS } from '../constants';
-import { 
-  Check, 
-  X, 
-  Sparkles, 
-  Clock, 
-  Loader2, 
-  Globe, 
-  ExternalLink,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
+import { getClassIcon, CLASS_LABELS, CLASS_OUTPUT_LABELS } from '../constants';
+import { Check, CheckCheck, X, Sparkles, Clock, Loader2, Globe, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
+import './TaskCard.css';
 
 interface TaskCardProps {
   task: Task;
-  onApprove: (taskId: string) => Promise<void>;
+  isFocused?: boolean;
+  onApprove: (task: Task, actionVerb: string) => void;
   onReject: (taskId: string) => Promise<void>;
-  onViewArtifact: (task: Task) => void;
+  onViewArtifact?: (task: Task) => void;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
+  isFocused = false,
   onApprove,
   onReject,
   onViewArtifact,
 }) => {
+  const isAutoApproved = task.status === 'auto_approved';
+  const isPending = task.status === 'pending_approval';
+  const isApproved = task.status === 'approved';
+  const isRejected = task.status === 'rejected';
+  const isExecuting = task.execution_status === 'executing';
+
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleApprove = async () => {
+  const handleApprove = () => {
     setIsApproving(true);
-    try {
-      await onApprove(task.id);
-    } finally {
-      setIsApproving(false);
-    }
+    onApprove(task, 'Authorizing task...');
   };
 
   const handleReject = async () => {
@@ -49,12 +44,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const isAutoApproved = task.status === 'auto_approved';
-  const isPending = task.status === 'pending_approval';
-  const isApproved = task.status === 'approved';
-  const isRejected = task.status === 'rejected';
-  const isExecuting = task.execution_status === 'executing';
-
   return (
     <motion.div
       layout
@@ -62,184 +51,146 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.2 }}
-      className={`rounded-[16px] p-5 transition-all relative overflow-hidden shadow-[0_2px_10px_rgba(4,63,46,0.04)] ${
-        isRejected
-          ? 'bg-[#f0e2dd]'
-          : isAutoApproved
-          ? 'bg-[#eef2e3]'
-          : 'bg-[#fcfcfc]'
-      }`}
+      className={`task-card ${isRejected ? 'variant-rejected' : isAutoApproved ? 'variant-auto' : 'variant-pending'} ${isFocused ? 'is-focused' : ''}`}
+      data-task-id={task.id}
     >
-      {/* Top: Metadata & Status Badges */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        
-        {/* Class Badge */}
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-[#eef2e3] text-xs font-mono text-[#043f2e] border border-[#043f2e]/10">
-          {CLASS_ICONS[task.class] || CLASS_ICONS['other']}
+      {/* Top: class chip + status badge */}
+      <div className="task-card-header">
+        <div className="task-class-chip">
+          {getClassIcon(task.class, 14)}
           <span>{CLASS_LABELS[task.class] || task.class}</span>
         </div>
 
-        {/* Autonomy Badge */}
         <div>
           {isAutoApproved && (
-            <span className="flex items-center gap-1 text-[11px] font-mono font-medium px-2 py-0.5 rounded-[4px] bg-[#c8f169] text-[#000000]">
-              <Sparkles className="w-3 h-3 text-[#000000]" />
-              <span>Auto-Approved</span>
+            <span className="status-badge badge-auto">
+              <CheckCheck size={12} strokeWidth={2} />
+              <span>Auto-executed</span>
             </span>
           )}
           {isPending && (
-            <span className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[#eef2e3] text-[#242423]">
-              <Clock className="w-3 h-3 text-[#242423]" />
-              <span>PENDING APPROVAL</span>
+            <span className="status-badge badge-pending">
+              <Clock size={11} strokeWidth={1.5} />
+              <span>Pending Approval</span>
             </span>
           )}
           {isApproved && (
-            <span className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[#eef2e3] text-[#2a6f2b] border border-[#2a6f2b]/30 font-medium">
-              <Check className="w-3 h-3 text-[#2a6f2b]" />
+            <span className="status-badge badge-approved">
+              <Check size={11} strokeWidth={2} />
               <span>Approved</span>
             </span>
           )}
           {isRejected && (
-            <span className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[#7a2e1e] text-[#fcfcfc] font-medium">
-              <X className="w-3 h-3 text-[#fcfcfc]" />
-              <span>Rejected</span>
+            <span className="status-badge badge-rejected">
+              <X size={11} strokeWidth={2} />
+              <span>Rejected (class demoted)</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* Task Text */}
-      <h3 className={`text-sm font-sans font-medium leading-relaxed mb-3 ${
-        isRejected ? 'line-through text-[#7a2e1e]' : 'text-[#043f2e]'
-      }`}>
+      {/* Title */}
+      <h3 className={`task-title ${isRejected ? 'text-strike' : ''}`}>
         {task.task}
       </h3>
 
-      {/* Deferred Condition Info */}
+      {/* Deferred wake condition */}
       {task.lane === 'later' && task.condition && (
-        <div className="mb-3 p-2.5 rounded-[4px] bg-[#eef2e3] border border-[#043f2e]/10 text-xs font-mono text-[#043f2e] space-y-1">
-          <div className="flex items-center gap-1.5 text-[#043f2e] font-semibold">
-            <Clock className="w-3.5 h-3.5" />
+        <div className="task-condition-block">
+          <div className="task-condition-label">
+            <Clock size={14} />
             <span>Wake Condition:</span>
           </div>
-          <p className="text-[#242423] pl-5 text-[11px]">{task.condition}</p>
+          <p className="task-condition-text">Waiting until {task.condition}.</p>
         </div>
       )}
 
-      {/* Execution in Progress Spinner */}
+      {/* Executing indicator */}
       {isExecuting && (
-        <div className="mb-3 p-2.5 rounded-[4px] bg-[#c8f169]/30 border border-[#c8f169] flex items-center justify-between text-xs text-[#043f2e] font-mono">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-[#043f2e]" />
+        <div className="task-executing-block">
+          <div className="task-executing-status">
+            <Loader2 size={14} className="animate-spin" />
             <span>Executing grounded research...</span>
           </div>
-          <span className="text-[10px] font-semibold uppercase">Autonomous</span>
+          <span className="task-executing-tag">Autonomous</span>
         </div>
       )}
 
-      {/* Artifact Preview Card */}
+      {/* Artifact / execution output */}
       {task.artifact && (
-        <div className="mb-3 rounded-[8px] bg-[#eef2e3] border border-[#043f2e]/10 overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-[#043f2e]/10 flex items-center justify-between bg-[#eef2e3]">
-            <div className="flex items-center gap-1.5 text-xs font-mono text-[#043f2e] font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-[#2a6f2b]" />
-              <span>Execution Output</span>
+        <div className="task-payload">
+          <div className="task-payload-header">
+            <div className="task-payload-heading">
+              <Sparkles size={13} />
+              <span>{CLASS_OUTPUT_LABELS[task.class] || CLASS_OUTPUT_LABELS['other']}</span>
             </div>
-            <button
-              onClick={() => onViewArtifact(task)}
-              className="text-[11px] text-[#043f2e]/80 hover:text-[#043f2e] font-medium flex items-center gap-1 cursor-pointer font-sans"
-            >
-              <span>Expand</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
+            {onViewArtifact && (
+              <button type="button" onClick={() => onViewArtifact(task)} className="task-payload-expand">
+                <span>Expand</span>
+                <ExternalLink size={11} />
+              </button>
+            )}
           </div>
 
-          <div className="p-3 text-xs text-[#242423] font-sans leading-relaxed">
-            <p className={isExpanded ? '' : 'line-clamp-3'}>
-              {task.artifact}
-            </p>
+          <div className="task-payload-body">
+            <p className={!isExpanded ? 'line-clamp-3' : ''}>{task.artifact}</p>
             {task.artifact.length > 180 && (
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="mt-1 text-[11px] text-[#2a6f2b] font-medium hover:underline flex items-center gap-1 cursor-pointer"
-              >
+              <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="task-payload-toggle">
                 {isExpanded ? (
-                  <>Show less <ChevronUp className="w-3 h-3" /></>
+                  <>Show less <ChevronUp size={12} /></>
                 ) : (
-                  <>Show more <ChevronDown className="w-3 h-3" /></>
+                  <>Show more <ChevronDown size={12} /></>
                 )}
               </button>
             )}
           </div>
 
-          {/* Sources and Grounding Tags */}
           {task.grounded && task.sources && task.sources.length > 0 && (
-            <div className="px-3 py-2 border-t border-[#043f2e]/10 bg-[#eef2e3]/60 flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-mono text-[#043f2e]/70 uppercase tracking-wider flex items-center gap-1">
-                <Globe className="w-2.5 h-2.5" /> Sources:
+            <div className="task-sources">
+              <span className="task-sources-label">
+                <Globe size={11} /> Sources:
               </span>
               {task.sources.slice(0, 3).map((s, idx) => (
-                <span
-                  key={idx}
-                  className="text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] bg-[#fcfcfc] border border-[#043f2e]/15 text-[#043f2e]"
-                >
-                  {s}
-                </span>
+                <span key={idx} className="task-source-chip">{s}</span>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Execution Error Display */}
+      {/* Execution error */}
       {task.execution_error && (
-        <div className="mb-3 p-2.5 rounded-[4px] bg-[#f0e2dd] border border-[#7a2e1e]/30 text-xs text-[#7a2e1e] font-mono">
-          <p className="font-semibold">Execution Issue:</p>
-          <p className="text-[11px] truncate">{task.execution_error}</p>
+        <div className="task-error-block">
+          <p className="task-error-title">Execution Issue:</p>
+          <p className="task-error-text">{task.execution_error}</p>
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Actions */}
       {!isRejected && (
-        <div className="flex items-center gap-2 pt-1">
-          
-          {/* Approve Button (when pending) */}
+        <div className="task-actions">
           {isPending && (
             <button
               onClick={handleApprove}
               disabled={isApproving || isRejecting}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-[4px] bg-[#c8f169] hover:bg-[#bde85b] text-[#000000] text-xs font-medium transition-all active:translate-y-[1px] disabled:opacity-50 cursor-pointer"
+              className="btn btn-primary task-approve-btn"
             >
-              {isApproving ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-              )}
+              {isApproving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />}
               <span>{isApproving ? 'Executing...' : 'Approve & Run'}</span>
             </button>
           )}
 
-          {/* Reject / Demote Button */}
           {(isPending || isAutoApproved) && (
             <button
               onClick={handleReject}
               disabled={isApproving || isRejecting}
-              className={`flex items-center justify-center gap-1 py-2 px-3 rounded-[4px] border text-xs font-medium transition-all active:translate-y-[1px] disabled:opacity-50 cursor-pointer ${
-                isAutoApproved
-                  ? 'flex-1 bg-[#f0e2dd] hover:bg-[#ebd3cb] border-[#7a2e1e]/40 text-[#7a2e1e]'
-                  : 'bg-transparent hover:bg-[#eef2e3] border-[#043f2e]/25 text-[#043f2e]'
-              }`}
+              className={`btn task-reject-btn ${isAutoApproved ? 'reject-demote' : 'btn-secondary'}`}
               title={isAutoApproved ? 'Reject and reset class back to 0 approvals' : 'Reject task'}
             >
-              {isRejecting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <X className="w-3.5 h-3.5" />
-              )}
+              {isRejecting ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
               <span>{isAutoApproved ? 'Reject & Demote' : 'Reject'}</span>
             </button>
           )}
-
         </div>
       )}
     </motion.div>

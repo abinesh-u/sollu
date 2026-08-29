@@ -1,0 +1,87 @@
+.design-kit-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-64) var(--spacing-32);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-64);
+  background-color: var(--color-pale-sage);
+  min-height: 100vh;
+}
+
+.kit-header {
+  border-bottom: 2px solid var(--color-vast-ink);
+  padding-bottom: var(--spacing-32);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kit-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-32);
+}
+
+.kit-section-title {
+  font-family: var(--font-eb-garamond);
+  font-size: var(--text-heading);
+  color: var(--color-vast-ink);
+  border-bottom: 2px solid var(--color-vast-ink);
+  padding-bottom: var(--spacing-16);
+}
+
+/* Palette Swatches */
+.kit-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--spacing-16);
+}
+
+.kit-swatch-card {
+  border: 2px solid var(--color-vast-ink);
+  border-radius: var(--radius-inputs);
+  overflow: hidden;
+  background-color: var(--color-pale-sage);
+}
+
+.kit-swatch-color {
+  height: 64px;
+  width: 100%;
+  border-bottom: 2px solid var(--color-vast-ink);
+}
+
+.kit-swatch-info {
+  padding: var(--spacing-16);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kit-swatch-name {
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--color-vast-ink);
+}
+
+.kit-swatch-hex {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  color: var(--color-charcoal);
+}
+
+/* Button showcase */
+.kit-buttons-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-16);
+  align-items: center;
+}
+
+.kit-rungs-row {
+  display: flex;
+  gap: var(--spacing-24);
+  align-items: center;
+  flex-wrap: wrap;
+}

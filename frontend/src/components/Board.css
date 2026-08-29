@@ -1,0 +1,110 @@
+.board-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-64);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.lane-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+}
+
+.lane-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-16);
+  padding: var(--spacing-16) 0;
+}
+
+.lane-header.sticky {
+  position: sticky;
+  top: var(--spacing-24);
+  z-index: 10;
+  background-color: var(--color-vast-ink); /* match dark chamber */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: var(--spacing-16);
+  backdrop-filter: blur(8px);
+}
+
+.lane-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+  border-radius: var(--radius-badges);
+  background-color: var(--color-pale-sage);
+  color: var(--color-vast-ink);
+  border: 2px solid var(--color-pale-sage);
+}
+
+.lane-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.lane-title {
+  font-family: var(--font-eb-garamond);
+  font-size: var(--text-heading-sm);
+  font-weight: 400;
+  color: var(--color-pale-sage);
+}
+
+.lane-count-chip {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-badges);
+  background-color: transparent;
+  border: 1px solid var(--color-pale-sage);
+  color: var(--color-pale-sage);
+}
+
+.lane-subtitle {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  color: var(--color-fog);
+  margin-top: 4px;
+}
+
+.lane-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: var(--spacing-24);
+}
+
+.lane-empty {
+  grid-column: 1 / -1;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--spacing-8);
+  padding: var(--spacing-16);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-cards);
+  background-color: transparent;
+  color: var(--color-fog);
+}
+
+.lane-empty-title {
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+}
+
+.lane-empty-sub {
+  font-size: var(--text-caption);
+}
+
+@media (max-width: 720px) {
+  .lane-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

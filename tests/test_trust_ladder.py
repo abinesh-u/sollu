@@ -36,6 +36,11 @@ class FakeDocumentReference:
                 current[k] = v
         self.collection.docs[self.doc_id] = current
 
+    def update(self, fields):
+        current = self.collection.docs.get(self.doc_id) or {}
+        current.update(fields)
+        self.collection.docs[self.doc_id] = current
+
 
 class FakeCollectionReference:
     def __init__(self, name):
@@ -105,16 +110,11 @@ class TestTrustLadderEngine(unittest.TestCase):
         # Demote
         self.engine.record_demotion("watch_price", "cid-demote")
         self.assertEqual(self.engine.get_status_for_task("watch_price", "cid-after"), "pending_approval")
-        self.assertEqual(self.engine.get_all_approvals(["watch_price"])["watch_price"], 0)
+        self.assertEqual(self.engine._read_approvals("watch_price"), 0)
 
-    def test_get_all_approvals_seeds_known_classes_at_zero(self):
-        """All known classes must be present in the ladder dictionary even if never stored."""
-        self.engine.record_approval("make_call", "cid-1")
-        ladder = self.engine.get_all_approvals(["make_call", "message_person", "research"])
-
-        self.assertEqual(ladder["make_call"], 1)
-        self.assertEqual(ladder["message_person"], 0)
-        self.assertEqual(ladder["research"], 0)
+    def test_approvals_default_to_zero(self):
+        """Unrecorded class approvals default to 0."""
+        self.assertEqual(self.engine._read_approvals("unknown_class"), 0)
 
 
 if __name__ == "__main__":

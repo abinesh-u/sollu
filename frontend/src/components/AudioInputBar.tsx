@@ -1,15 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Upload, Image as ImageIcon, X, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import './AudioInputBar.css';
 
 interface AudioInputBarProps {
   onProcessAudio: (audioBlob: Blob, filename: string, imageFile?: File | null) => Promise<void>;
   isProcessing: boolean;
+  speakOn: boolean;
+  onToggleSpeak: () => void;
 }
 
 export const AudioInputBar: React.FC<AudioInputBarProps> = ({
   onProcessAudio,
   isProcessing,
+  speakOn,
+  onToggleSpeak,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
@@ -101,139 +106,104 @@ export const AudioInputBar: React.FC<AudioInputBarProps> = ({
   };
 
   return (
-    <div className="w-full">
-      {/* Paper White Elevated Card - Vertical layout */}
-      <div className="bg-[#fcfcfc] rounded-[16px] p-8 shadow-[0_8px_30px_rgba(4,63,46,0.08)] relative overflow-hidden">
-        
-        {/* Header Row */}
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-sans font-semibold text-[#043f2e]">New voice note</h2>
-          {!isRecording && !isProcessing && (
-            <div className="w-10 h-10 rounded-full bg-[#c8f169] flex items-center justify-center border border-[#043f2e]/10">
-              <Mic className="w-5 h-5 text-[#043f2e]" />
-            </div>
-          )}
-        </div>
-
-        {/* Recording Visualizer */}
-        {isRecording && (
-          <div className="mb-8">
-            <div className="h-1.5 w-full bg-[#043f2e]/10 rounded-full overflow-hidden mb-4">
-              <motion.div 
-                className="h-full bg-[#043f2e]" 
-                animate={{ width: ['0%', '100%'] }} 
-                transition={{ duration: 60, ease: "linear" }} 
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-lg font-mono text-[#043f2e]">{formatTimer(recordSeconds)}</span>
-              <div className="flex-1 flex items-center gap-1 overflow-hidden h-8">
-                {[...Array(24)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ height: [8, Math.random() * 24 + 8, 8] }}
-                    transition={{ repeat: Infinity, duration: 0.5 + Math.random() * 0.5 }}
-                    className="w-1 bg-[#043f2e]/20 rounded-full"
-                  />
-                ))}
-              </div>
-            </div>
-            <p className="mt-4 text-[#242423] font-sans leading-relaxed text-sm h-12">
-              Listening to your instructions...
-            </p>
-          </div>
-        )}
-
-        {/* Processing State */}
-        {isProcessing && (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-[#043f2e] mb-4" />
-            <span className="text-[#043f2e] font-medium text-sm">Triaging note...</span>
-          </div>
-        )}
-
-        {/* Default State (Idle) */}
+    <div className="capture-card">
+      <div className="capture-header">
+        <h2 className="capture-title">New voice note</h2>
         {!isRecording && !isProcessing && (
-          <div className="py-6 flex flex-col items-center gap-4">
-             <p className="text-sm text-[#043f2e]/60 text-center mb-4">
-               Ready to record. Click the button below to start speaking.
-             </p>
-             <div className="flex flex-col sm:flex-row items-center gap-4">
-               <button
-                 onClick={handleStartRecording}
-                 className="flex items-center gap-2 px-6 py-3 rounded-[4px] bg-[#c8f169] text-[#000000] font-medium transition-all hover:bg-[#bde85b] hover:shadow-[0_4px_12px_rgba(200,241,105,0.4)] cursor-pointer"
-               >
-                 <Mic className="w-5 h-5" />
-                 <span>Record Note</span>
-               </button>
-               <span className="text-[#043f2e]/40 text-xs">or</span>
-               <button
-                 onClick={() => fileInputRef.current?.click()}
-                 className="flex items-center gap-2 px-6 py-3 rounded-[4px] bg-transparent border border-[#043f2e]/25 text-[#043f2e] font-medium transition-all hover:bg-[#eef2e3] cursor-pointer"
-               >
-                 <Upload className="w-4 h-4" />
-                 <span>Choose voice note</span>
-               </button>
-             </div>
+          <div className="capture-mic-badge">
+            <Mic size={20} strokeWidth={2} />
           </div>
         )}
+      </div>
 
-        {/* Stop Button (Active) */}
-        {isRecording && (
-          <div className="flex justify-center mt-4">
-            <button
-              onClick={handleStopRecording}
-              className="flex items-center gap-2 px-6 py-3 rounded-[4px] bg-[#7a2e1e] text-[#fcfcfc] font-medium transition-all hover:bg-[#632417] cursor-pointer"
-            >
-               <Square className="w-4 h-4 fill-current" />
-               <span>Stop & Process</span>
-            </button>
+      {isRecording && (
+        <div className="recording-active-container">
+          <div className="recording-status-row">
+            <motion.div 
+              className="waveform-canvas" 
+              animate={{ width: ['0%', '100%'] }} 
+              transition={{ duration: 60, ease: "linear" }} 
+            />
           </div>
-        )}
+          <div className="recording-status-row">
+            <span className="recording-timer">{formatTimer(recordSeconds)}</span>
+          </div>
+          <p className="capture-idle-hint">
+            Listening to your instructions...
+          </p>
+        </div>
+      )}
 
-        {/* Attachments & Toggles */}
-        <div className="mt-8 pt-4 border-t border-[#043f2e]/10 flex items-center justify-between gap-2 flex-wrap">
-          
-          <input ref={fileInputRef} type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" onChange={handleFileUpload} className="hidden" />
-          <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+      {isProcessing && (
+        <div className="capture-processing-row">
+          <Loader2 size={24} className="animate-spin" />
+          <span>Triaging note...</span>
+        </div>
+      )}
 
-          {/* Attachment Preview or Add button */}
+      {!isRecording && !isProcessing && (
+        <div className="capture-body">
+          <div className="capture-idle-row">
+            <p className="capture-idle-hint">Try: "Text Mom I'll be late, find a good Italian place nearby, and tell me when Uber prices drop."</p>
+            <div className="capture-idle-buttons">
+              <button onClick={handleStartRecording} className="record-btn-primary">
+                <Mic size={16} strokeWidth={2} style={{ display: 'inline', marginRight: 8 }} />
+                <span>Record Note</span>
+              </button>
+              <span className="capture-or">or</span>
+              <button onClick={() => fileInputRef.current?.click()} className="capture-add-image-btn" style={{ padding: 'var(--spacing-16) var(--spacing-32)' }}>
+                <Upload size={14} strokeWidth={1.5} />
+                <span>Choose voice note</span>
+              </button>
+            </div>
+            <span className="space-hint" style={{ marginTop: 'var(--spacing-16)' }}>Hold Space to speak</span>
+          </div>
+        </div>
+      )}
+
+      {isRecording && (
+        <div className="capture-idle-buttons" style={{ marginTop: 'var(--spacing-16)' }}>
+          <button onClick={handleStopRecording} className="btn-stop-recording">
+             <Square size={14} fill="currentColor" style={{ display: 'inline', marginRight: 8 }} />
+             <span>Stop & Process</span>
+          </button>
+        </div>
+      )}
+
+      <div className="capture-footer-row">
+        <input ref={fileInputRef} type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" onChange={handleFileUpload} style={{ display: 'none' }} />
+        <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
+
+        <div className="attachments-group">
           {imageFile ? (
-            <div className="rounded-[4px] bg-[#eef2e3] p-1 flex items-center gap-2 max-w-[200px]">
-              <img src={imagePreview!} className="w-6 h-6 rounded-[2px] object-cover" />
-              <span className="text-[10px] font-mono text-[#043f2e] truncate">{imageFile.name}</span>
-              <button onClick={handleRemoveImage} className="text-[#7a2e1e] hover:text-[#632417] px-1 cursor-pointer"><X className="w-3 h-3" /></button>
+            <div className="attachment-chip">
+              <img src={imagePreview!} alt="attachment" />
+              <span>{imageFile.name}</span>
+              <button onClick={handleRemoveImage} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={12} /></button>
             </div>
           ) : (
-            <button
-              onClick={() => imageInputRef.current?.click()}
-              disabled={isRecording || isProcessing}
-              className="flex items-center gap-1.5 text-xs font-medium text-[#043f2e]/60 hover:text-[#043f2e] transition-colors cursor-pointer"
-            >
-              <ImageIcon className="w-4 h-4" /> <span>Add an image</span>
+            <button onClick={() => imageInputRef.current?.click()} disabled={isRecording || isProcessing} className="capture-add-image-btn" style={{ background: 'none', cursor: 'pointer' }}>
+              <ImageIcon size={14} /> <span>Add an image</span>
             </button>
           )}
-
-          {/* Spoken summary toggle */}
-          <div className="flex items-center gap-2 text-xs font-medium text-[#043f2e]/80">
-            <span>Spoken summary</span>
-            <div className="w-8 h-4 bg-[#c8f169] rounded-full relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]">
-              <div className="w-3 h-3 bg-white rounded-full absolute right-0.5 top-0.5 shadow-sm" />
-            </div>
-          </div>
         </div>
 
-        {/* Error Alert */}
-        <AnimatePresence>
-          {errorMessage && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute top-4 left-4 right-4 p-3 rounded-[8px] bg-[#f0e2dd] border border-[#7a2e1e]/20 text-[#7a2e1e] text-xs flex items-center gap-2 shadow-lg">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMessage}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
+        <div className="toggle-wrapper" role="switch" aria-checked={speakOn} tabIndex={0} onKeyDown={(e) => e.key === ' ' && onToggleSpeak()} onClick={onToggleSpeak}>
+          <span>Spoken confirmation</span>
+          <div className={`toggle-switch ${speakOn ? 'is-on' : ''}`}>
+            <div className="toggle-thumb" />
+          </div>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {errorMessage && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="capture-error-banner">
+            <AlertCircle size={16} style={{ display: 'inline', marginRight: 8 }} />
+            <span>{errorMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

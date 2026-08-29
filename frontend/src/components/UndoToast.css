@@ -1,0 +1,97 @@
+.undo-toasts-container {
+  position: fixed;
+  bottom: var(--spacing-24);
+  right: var(--spacing-24);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--spacing-16);
+  max-width: 420px;
+  width: calc(100vw - 48px);
+  pointer-events: none;
+}
+
+.undo-toast {
+  pointer-events: auto;
+  background-color: var(--color-vast-ink);
+  color: var(--color-pale-sage);
+  border-radius: var(--radius-inputs);
+  border: 2px solid var(--color-vast-ink);
+  overflow: hidden;
+  position: relative;
+  font-family: var(--font-figtree);
+  font-size: var(--text-body-sm);
+}
+
+.undo-toast-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-16);
+  gap: var(--spacing-16);
+}
+
+.undo-toast-message {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  font-weight: 500;
+}
+
+.undo-toast-action {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.undo-btn {
+  background-color: var(--color-pale-sage);
+  color: var(--color-vast-ink);
+  font-weight: 600;
+  font-size: var(--text-caption);
+  padding: 8px 16px;
+  border-radius: var(--radius-badges);
+  border: 2px solid var(--color-vast-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.undo-btn:hover {
+  background-color: var(--color-sage-stone);
+}
+
+.undo-key-chip {
+  font-family: var(--font-figtree);
+  font-size: var(--text-caption);
+  background-color: var(--color-vast-ink);
+  color: var(--color-pale-sage);
+  border: 1px solid var(--color-pale-sage);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* 7s drain bar at the bottom */
+.undo-drain-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.undo-drain-bar {
+  height: 100%;
+  background-color: var(--color-chartreuse);
+  transform-origin: left;
+}
+
+@media (max-width: 720px) {
+  .undo-toasts-container {
+    bottom: var(--spacing-16);
+    right: var(--spacing-16);
+    left: var(--spacing-16);
+    width: auto;
+  }
+}

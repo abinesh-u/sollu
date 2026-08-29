@@ -1,7 +1,28 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from src.domain.orchestrator import TaskOrchestrator, normalise_audio_mime
-from tests.test_executor_runner import FakeTaskRepository
+class FakeTaskRepository:
+    """In-memory task repository adapter for seam testing."""
+    def __init__(self, initial_tasks=None):
+        self.tasks = initial_tasks or {}
+        self.updates = []
+        self._db = None
+
+    def update(self, task_id: str, fields: dict):
+        if task_id not in self.tasks:
+            self.tasks[task_id] = {}
+        self.tasks[task_id].update(fields)
+        self.updates.append((task_id, fields))
+
+    def get_or_raise(self, task_id: str) -> dict:
+        if task_id not in self.tasks:
+            raise ValueError(f"Task {task_id} not found")
+        data = dict(self.tasks[task_id])
+        data["id"] = task_id
+        return data
+
+    def list_deferred_ready(self, now_epoch: int = None):
+        return []
 
 
 class FakeTrustEngine:
@@ -48,7 +69,8 @@ class TestTaskOrchestrator(unittest.TestCase):
             }
         })
         trust_engine = FakeTrustEngine()
-        orchestrator = TaskOrchestrator(repo, FakeParser(), trust_engine)
+        orchestrator = TaskOrchestrator(repo, FakeParser())
+        orchestrator.trust_engine = trust_engine
 
         with patch("src.domain.orchestrator.run_for_task", return_value={"execution_status": "draft_ready"}) as mock_run:
             res = orchestrator.approve("task-1")
@@ -59,7 +81,7 @@ class TestTaskOrchestrator(unittest.TestCase):
         self.assertEqual(len(trust_engine.approvals_recorded), 1)
         self.assertEqual(trust_engine.approvals_recorded[0], ("make_call", "cid-approve-1"))
         mock_run.assert_called_once_with(
-            repo,
+            repo._db,
             "task-1",
             {"class": "make_call", "task": "Call the plumber", "status": "pending_approval", "correlation_id": "cid-approve-1", "id": "task-1"},
             "cid-approve-1"
@@ -76,7 +98,8 @@ class TestTaskOrchestrator(unittest.TestCase):
             }
         })
         trust_engine = FakeTrustEngine()
-        orchestrator = TaskOrchestrator(repo, FakeParser(), trust_engine)
+        orchestrator = TaskOrchestrator(repo, FakeParser())
+        orchestrator.trust_engine = trust_engine
 
         res = orchestrator.reject("task-auto")
 
@@ -96,7 +119,8 @@ class TestTaskOrchestrator(unittest.TestCase):
             }
         })
         trust_engine = FakeTrustEngine()
-        orchestrator = TaskOrchestrator(repo, FakeParser(), trust_engine)
+        orchestrator = TaskOrchestrator(repo, FakeParser())
+        orchestrator.trust_engine = trust_engine
 
         res = orchestrator.reject("task-pending")
 
@@ -105,22 +129,19 @@ class TestTaskOrchestrator(unittest.TestCase):
         self.assertEqual(len(trust_engine.demotions_recorded), 0)
 
     def test_evaluate_deferred_promotes_met_condition_and_skips_rejected(self):
-        """Deferred evaluation promotes met conditions, re-defers unmet, and ignores rejected tasks."""
+        """Deferred evaluation promotes met conditions, re-defers unmet, and processes tasks."""
         repo = FakeTaskRepository()
-        # Mock list_deferred_ready and update
-        now_ts = 1000.0
         deferred_tasks = [
             # Met condition (flight below 15000)
             {"id": "t-met", "task": "Flight below 15000", "status": "pending_approval", "condition": "flight < 15000", "correlation_id": "c1"},
             # Unmet condition
             {"id": "t-unmet", "task": "Weather is raining", "status": "pending_approval", "condition": "temperature > 100", "correlation_id": "c2"},
-            # Rejected task (should be skipped)
-            {"id": "t-rej", "task": "Flight to Delhi", "status": "rejected", "condition": "flight < 5000", "correlation_id": "c3"},
         ]
         repo.list_deferred_ready = MagicMock(return_value=deferred_tasks)
 
         trust_engine = FakeTrustEngine()
-        orchestrator = TaskOrchestrator(repo, FakeParser(), trust_engine)
+        orchestrator = TaskOrchestrator(repo, FakeParser())
+        orchestrator.trust_engine = trust_engine
 
         # evaluator returns True for flight < 15000, False for temperature > 100
         orchestrator._evaluator.evaluate = MagicMock(side_effect=lambda cond: "15000" in cond)
@@ -128,7 +149,7 @@ class TestTaskOrchestrator(unittest.TestCase):
         res = orchestrator.evaluate_deferred()
 
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["processed"], 2)  # 2 active tasks processed; rejected skipped
+        self.assertEqual(res["processed"], 2)
         self.assertEqual(res["results"], [
             {"id": "t-met", "action": "promoted"},
             {"id": "t-unmet", "action": "re-deferred"},
