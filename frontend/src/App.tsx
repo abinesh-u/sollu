@@ -83,23 +83,17 @@ export const App: React.FC = () => {
     }
   };
 
-  // Task approval handler
-  const handleApprove = async (taskId: string) => {
+  // Task action handler (Approve / Reject)
+  const handleTaskAction = async (taskId: string, action: 'approve' | 'reject') => {
     try {
-      await approveTask(taskId);
+      if (action === 'approve') {
+        await approveTask(taskId);
+      } else {
+        await rejectTask(taskId);
+      }
       await refreshData();
     } catch (err) {
-      console.error('Approval failed:', err);
-    }
-  };
-
-  // Task rejection handler
-  const handleReject = async (taskId: string) => {
-    try {
-      await rejectTask(taskId);
-      await refreshData();
-    } catch (err) {
-      console.error('Rejection failed:', err);
+      console.error(`Action ${action} failed:`, err);
     }
   };
 
@@ -122,13 +116,13 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container - 1200px max-width per DESIGN.md */}
-      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-8 space-y-16">
         
         {/* Top: Asymmetric Mid Editorial Hero */}
         <section className="flex flex-col lg:flex-row gap-12 lg:gap-24 pt-8 pb-16 items-center">
           <div className="flex-1 space-y-6">
             <h1 className="text-[64px] sm:text-[96px] font-serif text-[#043f2e] tracking-tighter leading-none mb-12">
-              Sollu<span className="text-[#c8f169] text-6xl">°</span>
+              Sollu
             </h1>
             <p className="text-3xl sm:text-5xl font-serif text-[#043f2e] tracking-tight leading-[1.1] max-w-[15ch]">
               Capture moments. Quietly. Express effortlessly with intuitive voice notes.
@@ -149,7 +143,7 @@ export const App: React.FC = () => {
               <span className="text-[12px] font-medium tracking-[0.06em] uppercase text-[#043f2e]/80 block">
                 Triaged Workflow
               </span>
-              <h2 className="text-3xl sm:text-4xl font-serif text-[#043f2e] tracking-[-0.72px] mt-1">
+              <h2 className="text-4xl sm:text-5xl font-serif text-[#043f2e] tracking-tight mt-1">
                 Project Sync Activity
               </h2>
             </div>
@@ -159,8 +153,8 @@ export const App: React.FC = () => {
           </div>
           <LanesBoard
             tasks={tasks}
-            onApprove={handleApprove}
-            onReject={handleReject}
+            onApprove={(id) => handleTaskAction(id, 'approve')}
+            onReject={(id) => handleTaskAction(id, 'reject')}
             onViewArtifact={(task) => setSelectedArtifactTask(task)}
           />
         </section>

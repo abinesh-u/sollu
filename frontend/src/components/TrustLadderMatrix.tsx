@@ -1,26 +1,12 @@
 import React from 'react';
 import type { ClassInfo } from '../types';
-import { ShieldCheck, Sparkles, PhoneCall, MessageSquare, Search, TrendingUp, FileText } from 'lucide-react';
+import { CLASS_ICONS, CLASS_LABELS } from '../constants';
+import { ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface TrustLadderMatrixProps {
   classes: ClassInfo[];
 }
-
-const CLASS_ICONS: Record<string, React.ReactNode> = {
-  make_call: <PhoneCall className="w-4 h-4 text-[#043f2e]" />,
-  message_person: <MessageSquare className="w-4 h-4 text-[#043f2e]" />,
-  research: <Search className="w-4 h-4 text-[#043f2e]" />,
-  watch_price: <TrendingUp className="w-4 h-4 text-[#043f2e]" />,
-};
-
-const CLASS_NAMES: Record<string, string> = {
-  make_call: 'Make Call',
-  message_person: 'Message Person',
-  research: 'Grounded Research',
-  watch_price: 'Watch Price',
-  other: 'General Tasks',
-};
 
 export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes }) => {
   const THRESHOLD = 3;
@@ -35,7 +21,7 @@ export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes })
             <ShieldCheck className="w-5 h-5 text-[#043f2e]" />
           </div>
           <div>
-            <h3 className="text-xl font-serif text-[#043f2e] tracking-[-0.36px]">
+            <h3 className="text-xl font-sans font-semibold text-[#043f2e] tracking-tight">
               Trust Ladder Autonomy Matrix
             </h3>
             <p className="text-xs text-[#242423]">
@@ -72,21 +58,21 @@ export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes })
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-[4px] bg-white border border-[#043f2e]/10 shrink-0">
-                    {CLASS_ICONS[cls.class] || <FileText className="w-4 h-4 text-[#043f2e]" />}
+                    {CLASS_ICONS[cls.class] || CLASS_ICONS['other']}
                   </div>
                   <span className="text-xs font-mono font-semibold text-[#043f2e] truncate">
-                    {CLASS_NAMES[cls.class] || cls.class}
+                    {CLASS_LABELS[cls.class] || cls.class}
                   </span>
                 </div>
 
                 {isAuto ? (
-                  <span className="flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-[4px] bg-[#c8f169] text-[#000000] shrink-0">
+                  <span className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-[4px] bg-[#c8f169] text-[#000000] shrink-0 uppercase">
                     <Sparkles className="w-2.5 h-2.5 text-[#000000]" />
-                    <span>Auto</span>
+                    <span>AUTO-APPROVES</span>
                   </span>
                 ) : (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] bg-white text-[#043f2e]/70 border border-[#043f2e]/15 shrink-0">
-                    Manual
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-[4px] bg-white text-[#043f2e]/70 border border-[#043f2e]/15 shrink-0 uppercase tracking-wide">
+                    ASKS FIRST
                   </span>
                 )}
               </div>

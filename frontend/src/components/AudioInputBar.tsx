@@ -103,11 +103,11 @@ export const AudioInputBar: React.FC<AudioInputBarProps> = ({
   return (
     <div className="w-full">
       {/* Paper White Elevated Card - Vertical layout */}
-      <div className="bg-[#fcfcfc] rounded-[24px] p-8 shadow-[0_8px_30px_rgba(4,63,46,0.08)] relative overflow-hidden">
+      <div className="bg-[#fcfcfc] rounded-[16px] p-8 shadow-[0_8px_30px_rgba(4,63,46,0.08)] relative overflow-hidden">
         
         {/* Header Row */}
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-serif text-[#043f2e]">New voice note</h2>
+          <h2 className="text-2xl font-sans font-semibold text-[#043f2e]">New voice note</h2>
           {!isRecording && !isProcessing && (
             <div className="w-10 h-10 rounded-full bg-[#c8f169] flex items-center justify-center border border-[#043f2e]/10">
               <Mic className="w-5 h-5 text-[#043f2e]" />
@@ -158,12 +158,23 @@ export const AudioInputBar: React.FC<AudioInputBarProps> = ({
              <p className="text-sm text-[#043f2e]/60 text-center mb-4">
                Ready to record. Click the button below to start speaking.
              </p>
-             <button
-               onClick={handleStartRecording}
-               className="w-24 h-24 rounded-full bg-[#c8f169] flex flex-col items-center justify-center gap-1 shadow-[0_4px_20px_rgba(200,241,105,0.4)] hover:scale-105 transition-transform cursor-pointer"
-             >
-               <Mic className="w-8 h-8 text-[#043f2e]" />
-             </button>
+             <div className="flex flex-col sm:flex-row items-center gap-4">
+               <button
+                 onClick={handleStartRecording}
+                 className="flex items-center gap-2 px-6 py-3 rounded-[4px] bg-[#c8f169] text-[#000000] font-medium transition-all hover:bg-[#bde85b] hover:shadow-[0_4px_12px_rgba(200,241,105,0.4)] cursor-pointer"
+               >
+                 <Mic className="w-5 h-5" />
+                 <span>Record Note</span>
+               </button>
+               <span className="text-[#043f2e]/40 text-xs">or</span>
+               <button
+                 onClick={() => fileInputRef.current?.click()}
+                 className="flex items-center gap-2 px-6 py-3 rounded-[4px] bg-transparent border border-[#043f2e]/25 text-[#043f2e] font-medium transition-all hover:bg-[#eef2e3] cursor-pointer"
+               >
+                 <Upload className="w-4 h-4" />
+                 <span>Choose voice note</span>
+               </button>
+             </div>
           </div>
         )}
 
@@ -172,18 +183,16 @@ export const AudioInputBar: React.FC<AudioInputBarProps> = ({
           <div className="flex justify-center mt-4">
             <button
               onClick={handleStopRecording}
-              className="w-20 h-20 rounded-full bg-[#043f2e] flex flex-col items-center justify-center gap-1 shadow-[0_4px_20px_rgba(4,63,46,0.3)] hover:scale-105 transition-transform cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3 rounded-[4px] bg-[#7a2e1e] text-[#fcfcfc] font-medium transition-all hover:bg-[#632417] cursor-pointer"
             >
-               <div className="flex items-center justify-center gap-1 text-[#c8f169]">
-                 <Square className="w-4 h-4 fill-current" />
-                 <span className="text-xs font-medium">Stop</span>
-               </div>
+               <Square className="w-4 h-4 fill-current" />
+               <span>Stop & Process</span>
             </button>
           </div>
         )}
 
-        {/* Attachments & Uploads */}
-        <div className="mt-8 pt-4 border-t border-[#043f2e]/10 flex items-center justify-between gap-2">
+        {/* Attachments & Toggles */}
+        <div className="mt-8 pt-4 border-t border-[#043f2e]/10 flex items-center justify-between gap-2 flex-wrap">
           
           <input ref={fileInputRef} type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" onChange={handleFileUpload} className="hidden" />
           <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
@@ -201,17 +210,17 @@ export const AudioInputBar: React.FC<AudioInputBarProps> = ({
               disabled={isRecording || isProcessing}
               className="flex items-center gap-1.5 text-xs font-medium text-[#043f2e]/60 hover:text-[#043f2e] transition-colors cursor-pointer"
             >
-              <ImageIcon className="w-4 h-4" /> <span>Photo</span>
+              <ImageIcon className="w-4 h-4" /> <span>Add an image</span>
             </button>
           )}
 
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isRecording || isProcessing}
-            className="flex items-center gap-1.5 text-xs font-medium text-[#043f2e]/60 hover:text-[#043f2e] transition-colors cursor-pointer"
-          >
-            <Upload className="w-4 h-4" /> <span>Upload File</span>
-          </button>
+          {/* Spoken summary toggle */}
+          <div className="flex items-center gap-2 text-xs font-medium text-[#043f2e]/80">
+            <span>Spoken summary</span>
+            <div className="w-8 h-4 bg-[#c8f169] rounded-full relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]">
+              <div className="w-3 h-3 bg-white rounded-full absolute right-0.5 top-0.5 shadow-sm" />
+            </div>
+          </div>
         </div>
 
         {/* Error Alert */}

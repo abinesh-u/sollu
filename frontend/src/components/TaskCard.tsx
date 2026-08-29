@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
 import type { Task } from '../types';
+import { CLASS_ICONS, CLASS_LABELS } from '../constants';
 import { 
   Check, 
   X, 
   Sparkles, 
   Clock, 
   Loader2, 
-  FileText, 
-  PhoneCall, 
-  MessageSquare, 
-  Search, 
-  TrendingUp, 
   Globe, 
   ExternalLink,
   ChevronDown,
@@ -24,21 +20,6 @@ interface TaskCardProps {
   onReject: (taskId: string) => Promise<void>;
   onViewArtifact: (task: Task) => void;
 }
-
-const CLASS_ICONS: Record<string, React.ReactNode> = {
-  make_call: <PhoneCall className="w-3.5 h-3.5 text-[#043f2e]" />,
-  message_person: <MessageSquare className="w-3.5 h-3.5 text-[#043f2e]" />,
-  research: <Search className="w-3.5 h-3.5 text-[#043f2e]" />,
-  watch_price: <TrendingUp className="w-3.5 h-3.5 text-[#043f2e]" />,
-};
-
-const CLASS_LABELS: Record<string, string> = {
-  make_call: 'Make Call',
-  message_person: 'Message Person',
-  research: 'Grounded Research',
-  watch_price: 'Watch Condition',
-  other: 'General Task',
-};
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
@@ -81,7 +62,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.2 }}
-      className={`rounded-[16px] p-5 transition-all relative overflow-hidden shadow-[0_2px_10px_rgba(4,63,46,0.04)] border border-[#043f2e]/5 ${
+      className={`rounded-[16px] p-5 transition-all relative overflow-hidden shadow-[0_2px_10px_rgba(4,63,46,0.04)] ${
         isRejected
           ? 'bg-[#f0e2dd]'
           : isAutoApproved
@@ -94,7 +75,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         
         {/* Class Badge */}
         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-[#eef2e3] text-xs font-mono text-[#043f2e] border border-[#043f2e]/10">
-          {CLASS_ICONS[task.class] || <FileText className="w-3.5 h-3.5 text-[#043f2e]" />}
+          {CLASS_ICONS[task.class] || CLASS_ICONS['other']}
           <span>{CLASS_LABELS[task.class] || task.class}</span>
         </div>
 

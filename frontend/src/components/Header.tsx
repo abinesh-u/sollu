@@ -56,14 +56,14 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onToggleSpeak}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-xs font-medium transition-all cursor-pointer border ${
               speakOn
-                ? 'bg-[#c8f169] text-[#000000] border-[#c8f169] hover:bg-[#bde85b]'
+                ? 'bg-[#043f2e] text-[#fcfcfc] border-[#043f2e] hover:bg-[#065b43]'
                 : 'bg-transparent border-[#043f2e]/30 text-[#043f2e] hover:bg-[#eef2e3]'
             }`}
             title="Toggle Gemini 2.5 Flash TTS confirmation"
           >
             {speakOn ? (
               <>
-                <Volume2 className="w-4 h-4 text-[#000000]" />
+                <Volume2 className="w-4 h-4 text-[#fcfcfc]" />
                 <span className="hidden sm:inline">Voice Confirmation On</span>
               </>
             ) : (

@@ -61,7 +61,7 @@ export const LanesBoard: React.FC<LanesBoardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-serif text-2xl tracking-[-0.72px] text-[#043f2e]">{lane.title}</h3>
+                    <h3 className="font-sans font-semibold text-2xl tracking-tight text-[#043f2e]">{lane.title}</h3>
                     <span className="text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[#eef2e3] text-[#043f2e] border border-[#043f2e]/15 font-semibold">
                       {laneTasks.length}
                     </span>
