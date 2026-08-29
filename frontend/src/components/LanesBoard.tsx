@@ -51,17 +51,17 @@ export const LanesBoard: React.FC<LanesBoardProps> = ({
         return (
           <div
             key={lane.id}
-            className="bg-[#fcfcfc] rounded-[16px] p-5 border border-[#043f2e]/10 flex flex-col min-h-[420px]"
+            className="flex flex-col min-h-[420px]"
           >
             {/* Lane Header */}
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#043f2e]/10">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-[4px] bg-[#eef2e3] border border-[#043f2e]/10">
+                <div className="p-2 rounded-[4px] bg-[#fcfcfc] shadow-sm">
                   {lane.icon}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-serif text-xl tracking-[-0.36px] text-[#043f2e]">{lane.title}</h3>
+                    <h3 className="font-serif text-2xl tracking-[-0.72px] text-[#043f2e]">{lane.title}</h3>
                     <span className="text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[#eef2e3] text-[#043f2e] border border-[#043f2e]/15 font-semibold">
                       {laneTasks.length}
                     </span>

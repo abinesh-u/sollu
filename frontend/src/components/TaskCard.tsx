@@ -81,13 +81,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.2 }}
-      className={`rounded-[16px] p-4 transition-all relative overflow-hidden ${
+      className={`rounded-[16px] p-5 transition-all relative overflow-hidden shadow-[0_2px_10px_rgba(4,63,46,0.04)] border border-[#043f2e]/5 ${
         isRejected
           ? 'bg-[#f0e2dd]'
           : isAutoApproved
           ? 'bg-[#eef2e3]'
-          : isApproved
-          ? 'bg-[#fcfcfc]'
           : 'bg-[#fcfcfc]'
       }`}
     >

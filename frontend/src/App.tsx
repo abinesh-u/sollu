@@ -142,15 +142,15 @@ export const App: React.FC = () => {
           </div>
         </section>
 
-        {/* Middle: 3-Lane Kanban (Now, Next, Later) */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
+        {/* Middle: Activity & Tasks */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <span className="text-[11px] font-mono tracking-[0.06em] uppercase text-[#043f2e]/70 block">
+              <span className="text-[12px] font-medium tracking-[0.06em] uppercase text-[#043f2e]/80 block">
                 Triaged Workflow
               </span>
-              <h2 className="text-2xl font-serif text-[#043f2e] tracking-[-0.72px]">
-                Execution Lanes
+              <h2 className="text-3xl sm:text-4xl font-serif text-[#043f2e] tracking-[-0.72px] mt-1">
+                Project Sync Activity
               </h2>
             </div>
             <span className="text-xs font-mono text-[#043f2e]/60">
