@@ -81,6 +81,15 @@ These cost hours to discover. Trust them over your priors:
   `grounding_chunks`) — never infer it from the prose. For source names use
   `GroundingChunkWeb.domain`; a model-supplied `sources` field returns
   unreadable `vertexaisearch…/grounding-api-redirect/…` URLs.
+- **`domain` is often `None`** and the `title` fallback can be a bare
+  `google.com`, which names no publisher. Verified 29 Aug: a research call
+  returned one chunk with `domain=None, title='google.com'`, so the card's
+  source chip read GOOGLE.COM while the finding itself credited IDC.
+- **`grounding_supports` is what ties a claim to a source**, and nothing reads
+  it yet. Each entry maps a span of the answer to chunk indices. Use it to check
+  that figures in an artifact are actually supported — on the run above all
+  three sentences, including every percentage, mapped to chunk 0. `grounded:
+  true` alone only says search happened, not that the numbers came from it.
 - **`gemini-2.5-flash-tts` returns raw PCM** (`audio/L16;codec=pcm;rate=24000`),
   which no browser plays from an `<audio>` element. `speaker.py` adds a 44-byte
   RIFF header server-side.
