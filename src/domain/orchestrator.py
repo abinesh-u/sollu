@@ -110,6 +110,9 @@ class TaskOrchestrator:
                 # record "audio" with no evidence.
                 "source": task_item.get("source", "audio"),
                 "evidence": task_item.get("evidence") or None,
+                # Persisted so the trust-ladder block survives the Firestore
+                # round-trip on approve and deferred paths.
+                "unresolved_recipient": task_item.get("unresolved_recipient", False),
                 "status": status,
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "usage": token_usage,
