@@ -40,6 +40,12 @@ class TaskRepository:
         """Partial update on a task document."""
         self._col.document(task_id).update(fields)
 
+    def update_execution(self, task_id: str, fields: dict) -> None:
+        """Update task with execution results, stamping executed_at server-side."""
+        payload = dict(fields)
+        payload["executed_at"] = firestore.SERVER_TIMESTAMP
+        self._col.document(task_id).update(payload)
+
     def list_recent(self, limit: int = 50) -> list[dict]:
         """Tasks ordered by created_at descending, serialised for JSON."""
         tasks = []

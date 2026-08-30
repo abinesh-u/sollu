@@ -84,17 +84,15 @@ git clone <this repo> && cd voice-agent
 cp .env.example .env        # fill in GOOGLE_CLOUD_PROJECT, CRON_SECRET
 uv sync                     # installs from pyproject.toml / uv.lock
 
+```bash
+cd frontend && npm install && npm run build && cd ..
 uv run uvicorn main:app --reload --port 8080
 ```
 
-Open `http://localhost:8080` — the backend serves `src/templates/index.html`
-directly when no built frontend is present. To run the real UI:
+Open `http://localhost:8080` — the backend serves the built React SPA from `frontend/dist`. To run with hot-reload during development:
 
 ```bash
-cd frontend
-npm install
-npm run build                # writes frontend/dist; main.py serves it automatically
-# or: npm run dev             # Vite dev server with hot reload, separate port
+cd frontend && npm run dev     # Vite dev server with hot reload
 ```
 
 ## Deploy (Cloud Run)

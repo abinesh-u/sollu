@@ -155,6 +155,30 @@ class TestTaskOrchestrator(unittest.TestCase):
             {"id": "t-unmet", "action": "re-deferred"},
         ])
 
+    def test_process_voice_note_computes_and_returns_summary(self):
+        """process_voice_note must compute and return summary for UI and spoken confirmation."""
+        repo = FakeTaskRepository()
+        repo.create = MagicMock(side_effect=lambda doc: (f"id-{doc['task']}", dict(doc, id=f"id-{doc['task']}")))
+        tasks = [
+            {"task": "Send message", "lane": "now", "class": "message_person"},
+            {"task": "Do research", "lane": "next", "class": "research"},
+            {"task": "Watch flight", "lane": "later", "class": "watch_price", "condition": "flight < 100"},
+        ]
+        parser = FakeParser(tasks=tasks)
+        trust_engine = FakeTrustEngine(default_status="pending_approval")
+        orchestrator = TaskOrchestrator(repo, parser)
+        orchestrator.trust_engine = trust_engine
+
+        with patch("builtins.open", unittest.mock.mock_open(read_data=b"fake-audio")):
+            res = orchestrator.process_voice_note("fake.wav", "cid-summary-test")
+
+        self.assertIn("summary", res)
+        summary = res["summary"]
+        self.assertEqual(summary["total"], 3)
+        self.assertEqual(summary["pending"], 3)
+        self.assertEqual(summary["watching"], 1)
+        self.assertEqual(summary["correlation_id"], "cid-summary-test")
+
 
 if __name__ == "__main__":
     unittest.main()

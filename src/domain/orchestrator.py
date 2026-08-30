@@ -131,8 +131,23 @@ class TaskOrchestrator:
             _, saved = self.repo.create(doc_data)
             saved_tasks.append(saved)
 
+        # Compute summary for client UI and spoken confirmation
+        total = len(saved_tasks)
+        pending = sum(1 for t in saved_tasks if t.get("status") == "pending_approval")
+        watching = sum(1 for t in saved_tasks if t.get("lane") == "later")
+        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == "auto_approved" and t.get("class")}))
+
+        summary = {
+            "total": total,
+            "pending": pending,
+            "watching": watching,
+            "auto_classes": auto_classes,
+            "correlation_id": correlation_id
+        }
+
         return {
             "tasks": saved_tasks,
+            "summary": summary,
             "usage": token_usage
         }
 

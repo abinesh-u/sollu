@@ -116,6 +116,22 @@ class TestTrustLadderEngine(unittest.TestCase):
         """Unrecorded class approvals default to 0."""
         self.assertEqual(self.engine._read_approvals("unknown_class"), 0)
 
+    def test_read_all_approvals_and_is_autonomous(self):
+        """read_all_approvals must return map with all known classes and is_autonomous must check threshold."""
+        self.engine.record_approval("research", "cid-1")
+        self.engine.record_approval("research", "cid-2")
+        self.engine.record_approval("research", "cid-3")
+        self.engine.record_approval("message_person", "cid-4")
+
+        ladder = self.engine.read_all_approvals(["research", "message_person", "make_call"])
+        self.assertEqual(ladder["research"], 3)
+        self.assertEqual(ladder["message_person"], 1)
+        self.assertEqual(ladder["make_call"], 0)
+
+        self.assertTrue(self.engine.is_autonomous(ladder["research"]))
+        self.assertFalse(self.engine.is_autonomous(ladder["message_person"]))
+        self.assertFalse(self.engine.is_autonomous(ladder["make_call"]))
+
 
 if __name__ == "__main__":
     unittest.main()
