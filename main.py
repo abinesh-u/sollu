@@ -19,7 +19,7 @@ from src.domain.task_repo import TaskRepository
 from src.domain.logger import log_event
 from src.domain.executor_runner import run_auto_approved
 from src.domain import speaker
-from src.executors.registry import KNOWN_CLASSES, describe
+from src.executors.registry import KNOWN_CLASSES
 from src.executors.base import AUTO_APPROVED
 from src.executors.gemini_executors import warm_up
 from src.agent import run_voice_agent
@@ -159,31 +159,14 @@ def delete_task(task_id: str, _=Depends(verify_api_secret)):
 def get_tasks():
     return repo.list_recent()
 
-def _read_ladder() -> dict:
-    """Approval count per class, with every known class present at zero."""
-    return orchestrator.trust_engine.read_all_approvals(KNOWN_CLASSES)
-
 @app.get("/api/trust_ladder")
 def get_trust_ladder():
-    return _read_ladder()
+    return orchestrator.trust_engine.read_all_approvals(KNOWN_CLASSES)
 
 @app.get("/api/classes")
 def get_classes():
     """Every task class with its executor status and current autonomy."""
-    ladder = _read_ladder()
-    out = []
-    for c in KNOWN_CLASSES:
-        entry = describe(c)
-        approvals = ladder.get(c, 0)
-        entry["approvals"] = approvals
-        entry["auto"] = orchestrator.trust_engine.is_autonomous(c, approvals)
-        
-        # Inject the threshold directly for the frontend
-        threshold = orchestrator.trust_engine._get_threshold(c)
-        entry["threshold"] = threshold if threshold is not None else "never"
-        
-        out.append(entry)
-    return out
+    return orchestrator.trust_engine.class_states(KNOWN_CLASSES)
 
 @app.post("/api/tasks/{task_id}/approve")
 def approve_task(task_id: str, _=Depends(verify_api_secret)):

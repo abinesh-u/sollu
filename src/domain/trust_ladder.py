@@ -42,24 +42,45 @@ class TrustLadderEngine:
         task_class = task.get("class", "")
         approvals = self._read_approvals(task_class)
         threshold = self._get_threshold(task_class)
-        
+
         # Hard Rule: If the task has an unresolved recipient (requires disambiguation),
         # it strictly cannot auto-execute, regardless of earned trust.
         is_unresolved = task.get("unresolved_recipient", False)
-        
+
         if is_unresolved:
             status = PENDING_APPROVAL
         else:
-            status = AUTO_APPROVED if threshold is not None and approvals >= threshold else PENDING_APPROVAL
-        
-        log_event(correlation_id, "ladder consulted", 
+            # Delegate to is_autonomous so the autonomy rule lives in one place.
+            status = AUTO_APPROVED if self.is_autonomous(task_class, approvals) else PENDING_APPROVAL
+
+        log_event(correlation_id, "ladder consulted",
             task_class=task_class,
-            current_approvals=approvals, 
-            threshold=threshold if threshold is not None else "never", 
+            current_approvals=approvals,
+            threshold=threshold if threshold is not None else "never",
             resulting_autonomy=status,
             unresolved_recipient=is_unresolved
         )
         return status
+
+    def class_states(self, known_classes: list[str]) -> list[dict]:
+        """Return the complete per-class ladder state for the /api/classes response.
+
+        Collapses the five-call assembly loop in main.py into a single call:
+        known classes, approval counts, threshold, autonomy flag, and UI metadata
+        all come out together, assembled once in the module that owns the rules.
+        """
+        from src.executors.registry import describe
+        approvals_map = self.read_all_approvals(known_classes)
+        out = []
+        for c in known_classes:
+            entry = describe(c)
+            approvals = approvals_map.get(c, 0)
+            threshold = self._get_threshold(c)
+            entry["approvals"] = approvals
+            entry["auto"] = self.is_autonomous(c, approvals)
+            entry["threshold"] = threshold if threshold is not None else "never"
+            out.append(entry)
+        return out
 
     def record_approval(self, task_class: str, correlation_id: str):
         """Atomically increments the approval count and handles threshold crossing."""
