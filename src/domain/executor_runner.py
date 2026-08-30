@@ -9,8 +9,6 @@ research call must not fail the upload that produced five perfectly good tasks.
 """
 import concurrent.futures
 
-from google.cloud import firestore
-
 from src.domain.logger import log_event
 from src.domain.task_repo import TaskRepository
 from src.executors.base import (
@@ -41,11 +39,10 @@ def _run_with_deadline(executor, task_data: dict) -> ExecutionResult:
         raise ExecutorTimeout(f"exceeded {deadline}s deadline") from None
 
 
-def run_for_task(db: firestore.Client, task_id: str, task_data: dict,
+def run_for_task(repo: TaskRepository, task_id: str, task_data: dict,
                  correlation_id: str) -> dict:
     task_class = task_data.get("class", "other")
     executor = get_executor(task_class)
-    repo = db if isinstance(db, TaskRepository) else TaskRepository(db)
 
     if executor is None:
         update = {"execution_status": NO_EXECUTOR, "artifact": None}
@@ -128,12 +125,12 @@ def run_for_task(db: firestore.Client, task_id: str, task_data: dict,
     return update
 
 
-def run_auto_approved(db: firestore.Client, queued: list[dict]) -> None:
+def run_auto_approved(repo: TaskRepository, queued: list[dict]) -> None:
     """Background entrypoint. `queued` carries each task's own correlation_id so
     the log shows one lifecycle from note received through execution complete."""
     for item in queued:
         try:
-            run_for_task(db, item["id"], item["data"], item["correlation_id"])
+            run_for_task(repo, item["id"], item["data"], item["correlation_id"])
         except Exception as e:
             # Belt and braces: the background task must never raise.
             log_event(item.get("correlation_id", "unknown"), "execution crashed",

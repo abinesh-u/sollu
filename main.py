@@ -121,7 +121,7 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
         if queued:
             log_event(correlation_id, "execution queued", count=len(queued),
                       task_ids=[q["id"] for q in queued])
-            background.add_task(run_auto_approved, db, queued)
+            background.add_task(run_auto_approved, repo, queued)
 
         return tasks_data
     except Exception as e:

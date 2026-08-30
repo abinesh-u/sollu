@@ -177,7 +177,7 @@ class TaskOrchestrator:
             # re-polls, so the extra seconds here are acceptable on the manual
             # path.
             execution = run_for_task(
-                self.repo._db, task_id, data, correlation_id)
+                self.repo, task_id, data, correlation_id)
 
         return {"status": "ok", "execution": execution}
 
