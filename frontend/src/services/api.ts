@@ -19,12 +19,18 @@ export async function fetchClasses(): Promise<ClassInfo[]> {
 }
 
 export async function processAudio(
-  audioBlob: Blob,
+  audioBlob: Blob | null,
   filename: string,
-  imageFile?: File | null
+  imageFile?: File | null,
+  text?: string
 ): Promise<ProcessAudioResponse> {
   const formData = new FormData();
-  formData.append('file', audioBlob, filename);
+  if (audioBlob) {
+    formData.append('file', audioBlob, filename);
+  }
+  if (text) {
+    formData.append('text', text);
+  }
   if (imageFile) {
     formData.append('image', imageFile, imageFile.name);
   }
@@ -67,4 +73,9 @@ export async function rejectTask(taskId: string): Promise<{ status: string }> {
   const res = await fetch(`/api/tasks/${taskId}/reject`, { method: 'POST' });
   if (!res.ok) throw new Error(`Reject failed (${res.status})`);
   return res.json();
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Delete failed (${res.status})`);
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Task, ClassInfo } from '../types';
 import { getClassIcon } from '../constants';
-import { Check, CheckCheck, X, Sparkles, Clock, Loader2, Globe, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, CheckCheck, X, Sparkles, Clock, Loader2, Globe, ExternalLink, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './TaskCard.css';
 
@@ -11,6 +11,7 @@ interface TaskCardProps {
   isFocused?: boolean;
   onApprove: (task: Task, actionVerb: string) => void;
   onReject: (taskId: string) => Promise<void>;
+  onDelete?: (taskId: string) => Promise<void>;
   onViewArtifact?: (task: Task) => void;
 }
 
@@ -20,6 +21,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   isFocused = false,
   onApprove,
   onReject,
+  onDelete,
   onViewArtifact,
 }) => {
   const isAutoApproved = task.status === 'auto_approved';
@@ -67,7 +69,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <span>{uiLabel}</span>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {onDelete && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+              className="task-delete-btn"
+              title="Delete task"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
           {isAutoApproved && (
             <span className="status-badge badge-auto">
               <CheckCheck size={12} strokeWidth={2} />

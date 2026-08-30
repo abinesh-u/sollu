@@ -58,10 +58,14 @@ class McpExecutor:
                 if declarations:
                     gemini_tools.append(types.Tool(function_declarations=declarations))
                 
+                is_auto = task.get("status") == "auto_approved"
+                action_mode = "send directly" if is_auto else "create a draft ONLY"
                 prompt = (
                     "You are a helpful assistant. Please execute the following task using the tools provided. "
                     "Output the final result of the action as a short Markdown summary.\n"
-                    f"Task: {task.get('task', '')}"
+                    f"Task: {task.get('task', '')}\n"
+                    f"Note: This task has {'been auto-approved' if is_auto else 'only been manually approved'}. "
+                    f"If sending an email, you MUST {action_mode} (set is_draft={not is_auto})."
                 )
                 
                 client = vertex_client()

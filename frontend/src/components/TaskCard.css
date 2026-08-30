@@ -296,3 +296,26 @@
 .task-reject-btn.reject-demote:hover:not(:disabled) {
   background-color: var(--color-charcoal);
 }
+
+.task-delete-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  color: var(--color-charcoal);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-card:hover .task-delete-btn {
+  opacity: 0.6;
+}
+
+.task-delete-btn:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.05);
+}

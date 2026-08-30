@@ -23,7 +23,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from src.domain.parser import GeminiAudioParser
 
@@ -38,7 +38,7 @@ def signature(tasks: list) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--audio", default="/tmp/voice-test/positive.wav")
+    ap.add_argument("--audio", default="scripts/fixtures/sample.wav")
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--log", default="logs/runs.jsonl")
     ap.add_argument("--budget", type=int, default=None,
