@@ -214,6 +214,5 @@ silently.
 - Bidirectional live streaming. Spoken confirmation is one-way: one
   `generate_content` call, no session, no websocket.
 - Dockerfile.
-- Workspace OAuth, while drafts-held-for-approval demo identically.
-- Executors that send, post, or call anything externally.
+- Native Workspace OAuth or custom API integrations for external tools. Instead, all external actions MUST be routed through a Model Context Protocol (MCP) client.
 - Further modalities. Audio, image, and mic capture are deployed; that is enough.

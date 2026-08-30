@@ -22,6 +22,7 @@ from src.domain import speaker
 from src.executors.registry import KNOWN_CLASSES, describe
 from src.executors.gemini_executors import warm_up
 from src.agent import run_voice_agent
+from src.mcp_server import mcp
 
 cfg = dotenv_values(".env")
 db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
@@ -30,6 +31,9 @@ repo = TaskRepository(db)
 orchestrator = TaskOrchestrator(repo, GeminiAudioParser())
 
 app = FastAPI(title="Voice Agent API")
+
+# Mount the internal MCP Server SSE endpoint
+app.mount("/sse", mcp.sse_app)
 
 def verify_cron_secret(x_cron_secret: str = Header(None)):
     expected = cfg.get("CRON_SECRET")

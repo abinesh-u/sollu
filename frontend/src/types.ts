@@ -57,6 +57,10 @@ export interface ClassInfo {
   executor: string;
   approvals: number;
   auto: boolean;
+  ui_label?: string;
+  ui_description?: string;
+  ui_output_label?: string;
+  ui_icon_name?: string;
 }
 
 export interface TrustLadderMap {

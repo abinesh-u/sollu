@@ -18,3 +18,7 @@ requirements.txt
 !.env.example
 
 .DS_Store
+
+# Google API Credentials
+credentials.json
+token.json

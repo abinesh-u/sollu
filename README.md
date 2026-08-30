@@ -53,6 +53,15 @@ Manual approval executes inline. Auto-approval executes in a background task so 
 latency stays flat — a grounded research call takes ~10–17s and runs per task — and the
 card shows an `executing` state until the artifact lands.
 
+## External Integrations via MCP (Model Context Protocol)
+
+Sollu is designed to execute real-world tasks across personal productivity tools (like Notion, Google Sheets, Todoist, and Apple Notes). However, rather than building custom, brittle API integrations and complex OAuth flows into the core codebase, we adopted the **Model Context Protocol (MCP)**.
+
+By leveraging the native MCP support (`McpToolset`) built into the `google-adk` framework:
+- **Plug-and-play Autonomy**: The agent acts as an MCP client. It dynamically connects to MCP servers, discovers their tools, and allows `gemini-3.5-flash` to use them directly (e.g., dynamically calling a Notion `add_database_row` tool when a user logs an expense).
+- **Reduced Deploy Risk**: We avoid expanding dependencies and hardcoding external service credentials inside the Cloud Run deployment.
+- **Maximum Agentic Capability**: This approach proves that the agent can generalize to arbitrary external environments simply by passing the parsed intent to an LLM equipped with an MCP toolset, completely bypassing the need for boilerplate integration code.
+
 ## Input
 
 A voice note can be recorded in the browser or uploaded as a file. An optional image

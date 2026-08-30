@@ -132,6 +132,7 @@ export const DesignKit: React.FC<DesignKitProps> = ({ onBack }) => {
           <div>
             <span className="eyebrow" style={{ display: 'block', marginBottom: 6 }}>1. Pending Variant</span>
             <TaskCard
+              classes={[]}
               task={SAMPLE_PENDING_TASK}
               onApprove={() => {}}
               onReject={async () => {}}
@@ -141,6 +142,7 @@ export const DesignKit: React.FC<DesignKitProps> = ({ onBack }) => {
           <div>
             <span className="eyebrow" style={{ display: 'block', marginBottom: 6 }}>2. Irreversible Variant (Expanded Payload)</span>
             <TaskCard
+              classes={[]}
               task={SAMPLE_IRREVERSIBLE_TASK}
               onApprove={() => {}}
               onReject={async () => {}}
@@ -150,6 +152,7 @@ export const DesignKit: React.FC<DesignKitProps> = ({ onBack }) => {
           <div>
             <span className="eyebrow" style={{ display: 'block', marginBottom: 6 }}>3. Auto-Approved Variant (Earned Autonomy + Artifact)</span>
             <TaskCard
+              classes={[]}
               task={SAMPLE_AUTO_TASK}
               onApprove={() => {}}
               onReject={async () => {}}

@@ -110,6 +110,7 @@ def run_for_task(db: firestore.Client, task_id: str, task_data: dict,
         "execution_usage": result.usage,
         "execution_seconds": result.elapsed_seconds,
         "execution_error": result.error,
+        "receipt": getattr(result, "receipt", {})
     }
     repo.update_execution(task_id, update)
 
