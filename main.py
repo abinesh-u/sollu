@@ -41,6 +41,21 @@ def verify_cron_secret(x_cron_secret: str = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
     return x_cron_secret
 
+def verify_api_secret(x_api_secret: str = Header(None)):
+    """Gate the mutating task endpoints behind a shared secret.
+
+    Opt-in, unlike verify_cron_secret: if API_SECRET isn't configured, these
+    endpoints stay open, so Tier 0/1 local setup and a fresh deploy without the
+    var set keep working with zero extra steps. Set it to stop anyone with the
+    URL from approving (and thereby sending) real actions. This is a
+    shared-secret gate shipped to the frontend bundle, not per-user auth — it
+    stops drive-by URL discovery, not a motivated reader of the page source.
+    """
+    expected = cfg.get("API_SECRET")
+    if expected and x_api_secret != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return x_api_secret
+
 @app.on_event("startup")
 def _warm_clients():
     """Build the executor client before the first request needs it.
@@ -61,7 +76,7 @@ def health_check():
 
 @app.post("/tasks")
 async def process_audio(background: BackgroundTasks, file: UploadFile = File(...),
-                        image: UploadFile = File(None)):
+                        image: UploadFile = File(None), _=Depends(verify_api_secret)):
     correlation_id = str(uuid.uuid4())
     # Save the uploaded file temporarily. The name is generated, not taken from
     # the upload: a MediaRecorder blob has no meaningful filename, and an
@@ -138,7 +153,7 @@ def speak_summary(payload: dict):
                     headers={"X-Spoken-Text": text})
 
 @app.delete("/api/tasks/{task_id}")
-def delete_task(task_id: str):
+def delete_task(task_id: str, _=Depends(verify_api_secret)):
     repo.delete(task_id)
     return {"status": "deleted"}
 
@@ -173,14 +188,14 @@ def get_classes():
     return out
 
 @app.post("/api/tasks/{task_id}/approve")
-def approve_task(task_id: str):
+def approve_task(task_id: str, _=Depends(verify_api_secret)):
     try:
         return orchestrator.approve(task_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Task not found")
 
 @app.post("/api/tasks/{task_id}/reject")
-def reject_task(task_id: str):
+def reject_task(task_id: str, _=Depends(verify_api_secret)):
     try:
         return orchestrator.reject(task_id)
     except ValueError:
