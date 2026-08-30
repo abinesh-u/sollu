@@ -179,6 +179,7 @@ export const App: React.FC = () => {
             <div style={{ marginTop: '64px' }}>
               <Board
                 tasks={tasks}
+                classes={classes}
                 focusedTaskId={null}
                 onApproveTask={handleApproveWithUndo}
                 onRejectTask={handleRejectTask}

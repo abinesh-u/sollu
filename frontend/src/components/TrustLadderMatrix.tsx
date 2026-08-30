@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ClassInfo } from '../types';
-import { getClassIcon, CLASS_LABELS, CLASS_DESCRIPTIONS } from '../constants';
+import { getClassIcon } from '../constants';
 import { TrustRung } from './TrustRung';
 import { ShieldCheck, CheckCheck } from 'lucide-react';
 import './TrustLadderMatrix.css';
@@ -41,16 +41,16 @@ export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes })
           {classes.map((cls) => {
             const approvals = cls.approvals || 0;
             const isAuto = approvals >= THRESHOLD;
-            const label = CLASS_LABELS[cls.class] || cls.label || cls.class;
+            const label = cls.ui_label || cls.label || cls.class;
 
             return (
               <div key={cls.class} className="ladder-card">
                 <div className="ladder-card-header">
-                  <div className="ladder-card-icon">{getClassIcon(cls.class, 16)}</div>
+                  <div className="ladder-card-icon">{getClassIcon(cls.class, classes, 16)}</div>
                   <span className="ladder-card-name">{label}</span>
                 </div>
 
-                <p className="ladder-card-desc">{CLASS_DESCRIPTIONS[cls.class] || cls.description}</p>
+                <p className="ladder-card-desc">{cls.ui_description || cls.description}</p>
 
                 <div className="ladder-card-footer">
                   <div className="ladder-progress-row">

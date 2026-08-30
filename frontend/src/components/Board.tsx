@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Task, TaskLane } from '../types';
+import type { Task, TaskLane, ClassInfo } from '../types';
 import { TaskCard } from './TaskCard';
 import { Zap, Compass, Clock, CheckCircle2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -7,6 +7,7 @@ import './Board.css';
 
 interface BoardProps {
   tasks: Task[];
+  classes: ClassInfo[];
   focusedTaskId: string | null;
   onApproveTask: (task: Task, actionVerb: string) => void;
   onRejectTask: (taskId: string) => Promise<void>;
@@ -21,6 +22,7 @@ const LANES: Array<{ id: TaskLane; title: string; subtitle: string; icon: React.
 
 export const Board: React.FC<BoardProps> = ({
   tasks,
+  classes,
   focusedTaskId,
   onApproveTask,
   onRejectTask,
@@ -51,6 +53,7 @@ export const Board: React.FC<BoardProps> = ({
                     <TaskCard
                       key={task.id}
                       task={task}
+                      classes={classes}
                       isFocused={focusedTaskId === task.id}
                       onApprove={onApproveTask}
                       onReject={onRejectTask}

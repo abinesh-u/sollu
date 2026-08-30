@@ -120,58 +120,7 @@ class ResearchExecutor:
         )
 
 
-class _DraftExecutor:
-    """Produces text a human still has to send. Nothing leaves the system."""
-    draft_only = True
-    deadline_seconds = 30
-    prompt = ""
-
-    def run(self, task: dict) -> ExecutionResult:
-        t0 = time.perf_counter()
-        resp = _gemini().models.generate_content(
-            model="gemini-3.5-flash",
-            contents=f"{self.prompt}\nTask: {task.get('task', '')}",
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                # No tools attached, so a zero thinking budget is safe here and
-                # keeps the draft fast.
-                thinking_config=types.ThinkingConfig(
-                    thinking_budget=0, include_thoughts=False
-                ),
-            ),
-        )
-        return ExecutionResult(
-            artifact=(resp.text or "").strip(),
-            status=DRAFT_READY,
-            tool_calls=1,
-            usage=_usage(resp),
-            elapsed_seconds=round(time.perf_counter() - t0, 2),
-        )
-
-
-class MessagePersonExecutor(_DraftExecutor):
-    kind = "gemini_draft"
-    label = "Gemini 3.5 Flash draft message (not sent)"
-    prompt = (
-        "Draft a short, friendly message the speaker could send to carry out this "
-        "task. Three sentences at most. Output only the message body — no subject "
-        "line, no preamble, no commentary."
-    )
-
-
-class MakeCallExecutor(_DraftExecutor):
-    kind = "gemini_draft"
-    label = "Gemini 3.5 Flash call script (no call placed)"
-    prompt = (
-        "Write a short call script for the speaker to follow when making this call: "
-        "an opening line, the two or three points to cover, and what to confirm "
-        "before hanging up. Output only the script."
-    )
-
-
 __all__ = [
     "ResearchExecutor",
-    "MessagePersonExecutor",
-    "MakeCallExecutor",
     "MAX_TOOL_CALLS",
 ]

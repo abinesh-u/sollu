@@ -99,7 +99,7 @@ class TaskOrchestrator:
             )
 
             # 2. Get status from Trust Ladder Engine
-            status = self.trust_engine.get_status_for_task(task_class, correlation_id)
+            status = self.trust_engine.get_status_for_task(task_item, correlation_id)
 
             doc_data = {
                 "task": task_text,

@@ -39,4 +39,5 @@ class ExecutionResult:
     elapsed_seconds: float = 0.0
     search_queries: list[str] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)
+    receipt: dict = field(default_factory=dict)
     error: str | None = None

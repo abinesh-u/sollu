@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import type { Task } from '../types';
-import { getClassIcon, CLASS_LABELS, CLASS_OUTPUT_LABELS } from '../constants';
+import type { Task, ClassInfo } from '../types';
+import { getClassIcon } from '../constants';
 import { Check, CheckCheck, X, Sparkles, Clock, Loader2, Globe, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './TaskCard.css';
 
 interface TaskCardProps {
   task: Task;
+  classes: ClassInfo[];
   isFocused?: boolean;
   onApprove: (task: Task, actionVerb: string) => void;
   onReject: (taskId: string) => Promise<void>;
@@ -15,6 +16,7 @@ interface TaskCardProps {
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
+  classes,
   isFocused = false,
   onApprove,
   onReject,
@@ -29,6 +31,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  
+  const cls = classes.find(c => c.class === task.class);
+  const uiLabel = cls?.ui_label || task.class;
+  const uiOutputLabel = cls?.ui_output_label || 'Execution result';
 
   const handleApprove = () => {
     setIsApproving(true);
@@ -57,8 +63,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {/* Top: class chip + status badge */}
       <div className="task-card-header">
         <div className="task-class-chip">
-          {getClassIcon(task.class, 14)}
-          <span>{CLASS_LABELS[task.class] || task.class}</span>
+          {getClassIcon(task.class, classes, 14)}
+          <span>{uiLabel}</span>
         </div>
 
         <div>
@@ -122,7 +128,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <div className="task-payload-header">
             <div className="task-payload-heading">
               <Sparkles size={13} />
-              <span>{CLASS_OUTPUT_LABELS[task.class] || CLASS_OUTPUT_LABELS['other']}</span>
+              <span>{uiOutputLabel}</span>
             </div>
             {onViewArtifact && (
               <button type="button" onClick={() => onViewArtifact(task)} className="task-payload-expand">
