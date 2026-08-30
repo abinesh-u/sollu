@@ -138,15 +138,8 @@ def get_tasks():
     return repo.list_recent()
 
 def _read_ladder() -> dict:
-    """Approval count per class, with every known class present at zero.
-
-    Single source for both /api/trust_ladder and /api/classes so the two routes
-    cannot disagree.
-    """
-    ladder = {c: 0 for c in KNOWN_CLASSES}
-    for doc in db.collection("trust_ladder").stream():
-        ladder[doc.id] = doc.to_dict().get("approvals", 0)
-    return ladder
+    """Approval count per class, with every known class present at zero."""
+    return orchestrator.trust_engine.read_all_approvals(KNOWN_CLASSES)
 
 @app.get("/api/trust_ladder")
 def get_trust_ladder():
@@ -161,7 +154,7 @@ def get_classes():
         entry = describe(c)
         approvals = ladder.get(c, 0)
         entry["approvals"] = approvals
-        entry["auto"] = approvals >= TrustLadderEngine.AUTO_EXECUTE_THRESHOLD
+        entry["auto"] = orchestrator.trust_engine.is_autonomous(approvals)
         out.append(entry)
     return out
 
@@ -201,8 +194,10 @@ def get_ui():
     if os.path.exists("frontend/dist/index.html"):
         with open("frontend/dist/index.html", "r") as f:
             return f.read()
-    with open("src/templates/index.html", "r") as f:
-        return f.read()
+    raise HTTPException(
+        status_code=404,
+        detail="Frontend not built. Run 'npm run build' in frontend/ to generate dist/index.html"
+    )
 
 if __name__ == "__main__":
     import uvicorn

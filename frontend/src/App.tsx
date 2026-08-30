@@ -40,12 +40,16 @@ export const App: React.FC = () => {
         fetchTasks().catch(() => []),
         fetchClasses().catch(() => []),
       ]);
-      setTasks(tasksData);
+      const pendingIds = new Set(pendingCommits.map((c) => c.taskId));
+      const mergedTasks: Task[] = pendingIds.size === 0
+        ? tasksData
+        : tasksData.map((t) => (pendingIds.has(t.id) ? { ...t, status: 'approved' as const } : t));
+      setTasks(mergedTasks);
       setClasses(classesData);
     } catch (err) {
       console.error('Error fetching data:', err);
     }
-  }, []);
+  }, [pendingCommits]);
 
   useEffect(() => {
     refreshData();
@@ -73,7 +77,6 @@ export const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to process voice note:', err);
-      alert(`Processing error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsProcessing(false);
       refreshData();

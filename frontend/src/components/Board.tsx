@@ -29,10 +29,7 @@ export const Board: React.FC<BoardProps> = ({
   return (
     <div className="board-feed">
       {LANES.map((lane) => {
-        // Remove slice(0,4) for the unified feed, or keep it if they just want top 4
-        // The user complained about too many tasks, so maybe slice(0, 6) here is safe,
-        // but with a vertical list it doesn't break layout as badly. We'll stick to 4.
-        const laneTasks = tasks.filter((t) => t.lane === lane.id).slice(0, 4);
+        const laneTasks = tasks.filter((t) => t.lane === lane.id);
 
         return (
           <div key={lane.id} className="lane-section" data-lane={lane.id}>

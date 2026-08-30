@@ -16,6 +16,17 @@ class TrustLadderEngine:
         doc = self.db.collection("trust_ladder").document(task_class).get()
         return doc.to_dict().get("approvals", 0) if doc.exists else 0
 
+    def read_all_approvals(self, known_classes: list[str]) -> dict[str, int]:
+        """Approval count per class, with every known class present at zero."""
+        ladder = {c: 0 for c in known_classes}
+        for doc in self.db.collection("trust_ladder").stream():
+            ladder[doc.id] = doc.to_dict().get("approvals", 0)
+        return ladder
+
+    def is_autonomous(self, approvals: int) -> bool:
+        """True if the approval count meets or exceeds the autonomy threshold."""
+        return approvals >= self.AUTO_EXECUTE_THRESHOLD
+
     def get_status_for_task(self, task_class: str, correlation_id: str) -> str:
         """Determines the status of a new task based on current trust ladder state."""
         approvals = self._read_approvals(task_class)

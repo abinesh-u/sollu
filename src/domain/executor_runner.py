@@ -12,6 +12,7 @@ import concurrent.futures
 from google.cloud import firestore
 
 from src.domain.logger import log_event
+from src.domain.task_repo import TaskRepository
 from src.executors.base import (
     FAILED,
     MAX_ATTEMPTS,
@@ -44,11 +45,11 @@ def run_for_task(db: firestore.Client, task_id: str, task_data: dict,
                  correlation_id: str) -> dict:
     task_class = task_data.get("class", "other")
     executor = get_executor(task_class)
-    doc_ref = db.collection("tasks").document(task_id)
+    repo = db if isinstance(db, TaskRepository) else TaskRepository(db)
 
     if executor is None:
         update = {"execution_status": NO_EXECUTOR, "artifact": None}
-        doc_ref.update(update)
+        repo.update(task_id, update)
         log_event(correlation_id, "execution complete",
                   task_id=task_id, task_class=task_class, execution_status=NO_EXECUTOR)
         return update
@@ -109,9 +110,8 @@ def run_for_task(db: firestore.Client, task_id: str, task_data: dict,
         "execution_usage": result.usage,
         "execution_seconds": result.elapsed_seconds,
         "execution_error": result.error,
-        "executed_at": firestore.SERVER_TIMESTAMP,
     }
-    doc_ref.update(update)
+    repo.update_execution(task_id, update)
 
     log_event(correlation_id, "execution complete",
               task_id=task_id,
@@ -123,7 +123,7 @@ def run_for_task(db: firestore.Client, task_id: str, task_data: dict,
               tool_calls=tool_calls_used,
               error=result.error)
 
-    update["executed_at"] = None  # SERVER_TIMESTAMP sentinel is not JSON-serialisable
+    update["executed_at"] = None  # Sentinel is applied server-side; None for response payload
     return update
 
 
