@@ -31,7 +31,7 @@ class FakeTrustEngine:
         self.approvals_recorded = []
         self.demotions_recorded = []
 
-    def get_status_for_task(self, task_class: str, correlation_id: str) -> str:
+    def get_status_for_task(self, task: dict, correlation_id: str) -> str:
         return self.default_status
 
     def record_approval(self, task_class: str, correlation_id: str):
