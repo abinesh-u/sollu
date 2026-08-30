@@ -2,6 +2,7 @@ import math
 from google.cloud import firestore
 from src.domain.logger import log_event
 from src.domain.intents import get_intent, Reversibility
+from src.executors.base import AUTO_APPROVED, PENDING_APPROVAL
 
 class TrustLadderEngine:
     def __init__(self, db: firestore.Client):
@@ -47,9 +48,9 @@ class TrustLadderEngine:
         is_unresolved = task.get("unresolved_recipient", False)
         
         if is_unresolved:
-            status = "pending_approval"
+            status = PENDING_APPROVAL
         else:
-            status = "auto_approved" if threshold is not None and approvals >= threshold else "pending_approval"
+            status = AUTO_APPROVED if threshold is not None and approvals >= threshold else PENDING_APPROVAL
         
         log_event(correlation_id, "ladder consulted", 
             task_class=task_class,

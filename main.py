@@ -20,6 +20,7 @@ from src.domain.logger import log_event
 from src.domain.executor_runner import run_auto_approved
 from src.domain import speaker
 from src.executors.registry import KNOWN_CLASSES, describe
+from src.executors.base import AUTO_APPROVED
 from src.executors.gemini_executors import warm_up
 from src.agent import run_voice_agent
 from src.mcp_server import mcp
@@ -115,7 +116,7 @@ async def process_audio(background: BackgroundTasks, file: UploadFile = File(...
         queued = [
             {"id": t["id"], "data": t, "correlation_id": correlation_id}
             for t in tasks_data.get("tasks", [])
-            if t.get("status") == "auto_approved"
+            if t.get("status") == AUTO_APPROVED
         ]
         if queued:
             log_event(correlation_id, "execution queued", count=len(queued),

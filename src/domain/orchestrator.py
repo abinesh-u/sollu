@@ -16,6 +16,7 @@ from src.domain.logger import log_event
 from src.domain.parser import GeminiAudioParser
 from src.domain.task_repo import TaskRepository
 from src.domain.trust_ladder import TrustLadderEngine
+from src.executors.base import AUTO_APPROVED, PENDING_APPROVAL
 
 # Verified against gemini-3.5-flash: audio/webm, audio/ogg, audio/mp4 and
 # audio/wav all parse, with or without a ";codecs=opus" suffix. video/webm is
@@ -119,7 +120,7 @@ class TaskOrchestrator:
             # response. Stamping the state in the same write the doc is created
             # with costs nothing and means the doc is never observable as
             # auto-approved with no execution state under it.
-            if status == "auto_approved":
+            if status == AUTO_APPROVED:
                 doc_data["execution_status"] = "executing"
 
             if task_lane == "later":
@@ -133,9 +134,9 @@ class TaskOrchestrator:
 
         # Compute summary for client UI and spoken confirmation
         total = len(saved_tasks)
-        pending = sum(1 for t in saved_tasks if t.get("status") == "pending_approval")
+        pending = sum(1 for t in saved_tasks if t.get("status") == PENDING_APPROVAL)
         watching = sum(1 for t in saved_tasks if t.get("lane") == "later")
-        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == "auto_approved" and t.get("class")}))
+        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == AUTO_APPROVED and t.get("class")}))
 
         summary = {
             "total": total,
@@ -185,7 +186,7 @@ class TaskOrchestrator:
         self.repo.update(task_id, {"status": "rejected"})
 
         # If rejecting an auto-executed task, reset the ladder (demotion signal)
-        if data.get("status") == "auto_approved":
+        if data.get("status") == AUTO_APPROVED:
             task_class = data.get("class", "other")
             self.trust_engine.record_demotion(task_class, correlation_id)
 

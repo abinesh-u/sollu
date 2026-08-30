@@ -8,7 +8,7 @@ from mcp.client.session import ClientSession
 from google.cloud import firestore
 
 from src.domain.vertex import vertex_client
-from src.executors.base import EXECUTED, ExecutionResult
+from src.executors.base import AUTO_APPROVED, EXECUTED, ExecutionResult
 
 
 class McpExecutor:
@@ -58,7 +58,7 @@ class McpExecutor:
                 if declarations:
                     gemini_tools.append(types.Tool(function_declarations=declarations))
                 
-                is_auto = task.get("status") == "auto_approved"
+                is_auto = task.get("status") == AUTO_APPROVED
                 action_mode = "send directly" if is_auto else "create a draft ONLY"
                 prompt = (
                     "You are a helpful assistant. Please execute the following task using the tools provided. "
