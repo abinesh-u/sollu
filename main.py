@@ -24,12 +24,9 @@ from src.executors.base import AUTO_APPROVED
 from src.executors.gemini_executors import warm_up
 from src.agent import run_voice_agent
 from src.mcp_server import mcp
+from src.singletons import db, repo, orchestrator
 
 cfg = dotenv_values(".env")
-db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
-
-repo = TaskRepository(db)
-orchestrator = TaskOrchestrator(repo, GeminiAudioParser())
 
 app = FastAPI(title="Voice Agent API")
 
