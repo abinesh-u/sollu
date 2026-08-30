@@ -93,9 +93,16 @@ checkbox — it runs a real executor and puts a real artifact on the card.
 
 ## Monitoring & Governance
 
-**Observability** — every pipeline stage logs a structured JSON event (`log_event`, `src/domain/logger.py`) to stdout, threaded by `correlation_id`: note received, tasks extracted, triage decision, ladder consulted, promotion, demotion, execution complete/timed out/failed/crashed, tool cap hit, deferred wake fired, spoken confirmation — 19 call sites across 5 files, no extra dependency, native to Cloud Logging. `GET /health`, `GET /api/trust_ladder`, `GET /api/classes` expose live state. Not present: distributed tracing, custom metrics, or dashboards/alerting — logs are the whole observability surface today.
+**Observability**
+- Every step (note received, triage, ladder check, promotion/demotion, execution, etc.) logs a JSON event tagged with a `correlation_id` — one note's full lifecycle greps out in order. (`src/domain/logger.py`)
+- `GET /health`, `/api/trust_ladder`, `/api/classes` show live status.
+- Not there yet: tracing, metrics, dashboards, alerting. Logs are the whole story today.
 
-**Governance** — the trust ladder is the core control: hard tasks structurally can never auto-run, one rejection demotes instantly, every MCP call is idempotency-keyed against duplicate real-world side effects, and model tool-calls per execution are hard-capped (`MAX_TOOL_CALLS = 3`, `src/executors/base.py:17`). `POST /api/tasks/{id}/approve|reject`, `DELETE /api/tasks/{id}`, and `POST /tasks` sit behind an opt-in shared secret (`API_SECRET` → `X-Api-Secret`, `verify_api_secret` in `main.py`) — a demo-grade gate against drive-by URL discovery, not per-user auth, since the secret ships in the frontend bundle. `POST /api/cron/deferred` is separately gated (`X-Cron-Secret`). Read-only `GET` endpoints stay open by design. No rate limiting, no CORS policy, no RBAC, no input-sanitization layer ahead of the executors — the ladder is the only line of defense between a voice note and a real action.
+**Governance**
+- The trust ladder is the real control: hard tasks (email) never auto-run, one rejection resets a class to zero, and every real action is idempotency-keyed so a retry can't double-send.
+- A hard cap of 3 model tool-calls per execution stops runaway loops. (`MAX_TOOL_CALLS`, `src/executors/base.py:17`)
+- `approve` / `reject` / `delete` / submitting a note can be locked behind a shared secret (`API_SECRET`, opt-in). It's a basic gate, not real per-user login — the secret ships in the frontend code.
+- Not there: rate limiting, CORS rules, per-user roles, or input filtering before a voice note reaches the executors. The trust ladder is the only real safety net.
 
 ---
 
