@@ -4,8 +4,6 @@ import type { ClassInfo } from './types';
 // Fallback lookup if API hasn't loaded yet
 export const getFallbackLabel = (taskClass: string) => {
   const map: Record<string, string> = {
-    make_call: 'Make Call',
-    message_person: 'Message Person',
     research: 'Grounded Research',
     watch_price: 'Watch Condition',
   };
