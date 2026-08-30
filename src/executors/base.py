@@ -13,6 +13,12 @@ DRAFT_READY = "draft_ready"
 NO_EXECUTOR = "no_executor"
 FAILED = "failed"
 
+# task lifecycle status — assigned by the trust ladder, read by approval transitions
+AUTO_APPROVED = "auto_approved"
+PENDING_APPROVAL = "pending_approval"
+APPROVED = "approved"
+REJECTED = "rejected"
+
 # Hard cap on model invocations inside a single task execution.
 MAX_TOOL_CALLS = 3
 # Initial call plus one retry.

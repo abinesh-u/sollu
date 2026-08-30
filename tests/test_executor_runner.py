@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from src.domain.executor_runner import run_for_task, run_auto_approved
+from src.domain.task_repo import TaskRepository
 from src.executors.base import NO_EXECUTOR, ExecutionResult, DRAFT_READY, ExecutorTimeout, FAILED
 from tests.test_trust_ladder import FakeFirestoreClient
 
@@ -8,6 +9,7 @@ from tests.test_trust_ladder import FakeFirestoreClient
 class TestExecutorRunner(unittest.TestCase):
     def setUp(self):
         self.db = FakeFirestoreClient()
+        self.repo = TaskRepository(self.db)
 
     def test_unregistered_class_sets_no_executor_status(self):
         """Slice 1: An unknown task class must record NO_EXECUTOR status and artifact=None."""
@@ -16,7 +18,7 @@ class TestExecutorRunner(unittest.TestCase):
         })
 
         result = run_for_task(
-            db=self.db,
+            repo=self.repo,
             task_id="task-1",
             task_data={"class": "unknown_future_class", "task": "Do something"},
             correlation_id="test-cid-1"
@@ -50,7 +52,7 @@ class TestExecutorRunner(unittest.TestCase):
 
         with patch("src.domain.executor_runner.get_executor", return_value=mock_executor):
             result = run_for_task(
-                db=self.db,
+                repo=self.repo,
                 task_id="task-2",
                 task_data={"class": "message_person", "task": "Send message to Alice"},
                 correlation_id="test-cid-2"
@@ -77,7 +79,7 @@ class TestExecutorRunner(unittest.TestCase):
 
         with patch("src.domain.executor_runner.get_executor", return_value=mock_executor):
             result = run_for_task(
-                db=self.db,
+                repo=self.repo,
                 task_id="task-3",
                 task_data={"class": "research", "task": "Investigate database options"},
                 correlation_id="test-cid-3"
@@ -101,7 +103,7 @@ class TestExecutorRunner(unittest.TestCase):
             {"id": "t-2", "data": {"class": "unknown_2", "task": "Task 2"}, "correlation_id": "cid-2"},
         ]
 
-        run_auto_approved(self.db, queued)
+        run_auto_approved(self.repo, queued)
 
         task_1 = self.db.collection("tasks").document("t-1").get().to_dict()
         task_2 = self.db.collection("tasks").document("t-2").get().to_dict()

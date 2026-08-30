@@ -18,6 +18,16 @@ checkbox — it runs a real executor and puts a real artifact on the card.
 
 ---
 
+## Agent Design
+
+- `VoiceAgent` is a custom `google-adk` `BaseAgent`, not an `LlmAgent` — one voice note in, one deterministic triage pass out, so it directly invokes one `FunctionTool` and yields the result as an ADK `Event` rather than delegating a decision to an LLM at the orchestration layer. (`src/agent.py:47-58`)
+- `run_voice_agent()` is the only ADK-facing entry point — it owns the Runner/session plumbing so `main.py` stays a thin HTTP adapter. (`src/agent.py:64-90`)
+- Pipeline: parse (Gemini, audio → structured tasks) → triage (lane + class) → consult `TrustLadderEngine` → persist to Firestore → queue for execution.
+- Execution is pluggable by manifest, not by code branch: `src/executors/registry.py` builds `KNOWN_CLASSES`/`EXECUTORS` straight from `intents.py` — adding a task class means adding one `TaskIntent` entry, not touching the pipeline.
+- Per-task state machine: `pending_approval` → approve/reject → `executed`/`rejected`; `auto_approved` once the class's threshold is met — unless the task has an unresolved recipient, which overrides the threshold (see Edge Cases).
+
+---
+
 ## Repository Structure
 
 ```
@@ -59,11 +69,40 @@ checkbox — it runs a real executor and puts a real artifact on the card.
 
 - **Reversibility, not frequency, sets the threshold.** `TrustLadderEngine._get_threshold`: `0` read-only, `3` soft, `None` (never) hard — tracked per class in Firestore, so `add_todo_task` and `create_notion_page` earn trust independently. Hard tasks structurally can't promote, no matter how much trust accrues elsewhere.
 - **Idempotency on real actions.** `McpExecutor` hashes `note + intent + args` per MCP call, so a retry can't double-send a real email.
-- **Grounded search + schema compose.** 244s without `response_schema`, 18.7s with it. `executor_runner._run_with_deadline` enforces a real wall-clock deadline itself — `HttpOptions.timeout` is an httpx read timeout, not one.
+- **Grounded search + schema compose** (numbers in Operational Metrics). `executor_runner._run_with_deadline` enforces a real wall-clock deadline itself — `HttpOptions.timeout` is an httpx read timeout, not one.
 - **Grounding read from metadata, not prose.** The model's own `sources` field is a dead redirect link; real source is `grounding_metadata.grounding_chunks[].domain` (sometimes `None` — caught an IDC finding mislabeled "GOOGLE.COM").
 - **Model region ≠ infra region.** `gemini-3.5-flash` isn't PAYG in `asia-south1`; called at the `global` endpoint while Cloud Run/Firestore stay regional.
 - **Safety is the ladder, not a bolt-on.** Every class starts `pending_approval`; one rejection resets it to zero; `POST /api/cron/deferred` requires `X-Cron-Secret`; every step logs by `correlation_id`.
 - **TTS is kept dumb.** Gets one finished sentence, never audio/transcript/task text; failure degrades silently to text.
+
+---
+
+## Operational Metrics
+
+| Path | Median | Range |
+|---|---|---|
+| `parse_audio` locally | 4.2s | 3.8s – 80s (the 80s outlier is a local network issue, not the model) |
+| `POST /tasks` end-to-end (Cloud Run) | 6.5s | 5.2s – 6.8s — covers upload, model call, 4 Firestore writes, ladder reads |
+| Grounded research, with `response_schema` | 18.7s | — |
+| Grounded research, without `response_schema` | 244s | — why the schema is mandatory, not optional |
+
+- Token usage (audio/text/candidate/total) is logged on every task doc — cost per note is measured, not estimated.
+- Cloud Run runs with `--min-instances=1`: auto-approved execution happens in a background task after the response, and a scaled-to-zero instance would silently drop that work.
+
+---
+
+## Monitoring & Governance
+
+**Observability**
+- Every step (note received, triage, ladder check, promotion/demotion, execution, etc.) logs a JSON event tagged with a `correlation_id` — one note's full lifecycle greps out in order. (`src/domain/logger.py`)
+- `GET /health`, `/api/trust_ladder`, `/api/classes` show live status.
+- Not there yet: tracing, metrics, dashboards, alerting. Logs are the whole story today.
+
+**Governance**
+- The trust ladder is the real control: hard tasks (email) never auto-run, one rejection resets a class to zero, and every real action is idempotency-keyed so a retry can't double-send.
+- A hard cap of 3 model tool-calls per execution stops runaway loops. (`MAX_TOOL_CALLS`, `src/executors/base.py:17`)
+- `approve` / `reject` / `delete` / submitting a note can be locked behind a shared secret (`API_SECRET`, opt-in). It's a basic gate, not real per-user login — the secret ships in the frontend code.
+- Not there: rate limiting, CORS rules, per-user roles, or input filtering before a voice note reaches the executors. The trust ladder is the only real safety net.
 
 ---
 

@@ -53,15 +53,18 @@ export interface ProcessAudioResponse {
 export interface ClassInfo {
   class: string;
   label: string;
-  description: string;
-  executor: string;
+  // fields from registry.describe()
+  has_executor: boolean;
+  executor_kind: string | null;
+  draft_only: boolean;
+  reversibility: string;
+  ui_label: string;
+  ui_description: string;
+  ui_output_label: string;
+  ui_icon_name: string;
   approvals: number;
   auto: boolean;
   threshold?: number | 'never';
-  ui_label?: string;
-  ui_description?: string;
-  ui_output_label?: string;
-  ui_icon_name?: string;
 }
 
 export interface TrustLadderMap {

@@ -78,39 +78,40 @@ class TestTrustLadderEngine(unittest.TestCase):
         self.engine = TrustLadderEngine(self.db)
 
     def test_new_task_starts_as_pending_approval(self):
-        """Tasks with 0 approvals must evaluate to pending_approval."""
-        status = self.engine.get_status_for_task("research", correlation_id="cid-1")
+        """Tasks with 0 approvals must evaluate to pending_approval for a SOFT class."""
+        # add_todo_task is SOFT (threshold=3); 0 approvals → pending
+        status = self.engine.get_status_for_task({"class": "add_todo_task"}, correlation_id="cid-1")
         self.assertEqual(status, "pending_approval")
 
     def test_reaching_three_approvals_promotes_and_records_event(self):
         """Recording 3 approvals must cross threshold to auto_approved and write promotion_events."""
-        self.engine.record_approval("research", "cid-1")
-        self.assertEqual(self.engine.get_status_for_task("research", "cid-1"), "pending_approval")
+        self.engine.record_approval("add_todo_task", "cid-1")
+        self.assertEqual(self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-1"), "pending_approval")
 
-        self.engine.record_approval("research", "cid-2")
-        self.assertEqual(self.engine.get_status_for_task("research", "cid-2"), "pending_approval")
+        self.engine.record_approval("add_todo_task", "cid-2")
+        self.assertEqual(self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-2"), "pending_approval")
 
         # Third approval crosses threshold (3)
-        self.engine.record_approval("research", "cid-3")
-        self.assertEqual(self.engine.get_status_for_task("research", "cid-3"), "auto_approved")
+        self.engine.record_approval("add_todo_task", "cid-3")
+        self.assertEqual(self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-3"), "auto_approved")
 
         # Verify promotion event was written
         events = self.db.collection("promotion_events").added
         self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["class"], "research")
+        self.assertEqual(events[0]["task_class"], "add_todo_task")
         self.assertEqual(events[0]["count"], 3)
 
     def test_demotion_resets_approvals_to_zero(self):
         """Rejecting an auto-approved task resets approvals to 0 and reverts status to pending_approval."""
-        # Setup class with 3 approvals
+        # Setup a SOFT class with 3 approvals
         for i in range(3):
-            self.engine.record_approval("watch_price", f"cid-{i}")
-        self.assertEqual(self.engine.get_status_for_task("watch_price", "cid-check"), "auto_approved")
+            self.engine.record_approval("create_notion_page", f"cid-{i}")
+        self.assertEqual(self.engine.get_status_for_task({"class": "create_notion_page"}, "cid-check"), "auto_approved")
 
         # Demote
-        self.engine.record_demotion("watch_price", "cid-demote")
-        self.assertEqual(self.engine.get_status_for_task("watch_price", "cid-after"), "pending_approval")
-        self.assertEqual(self.engine._read_approvals("watch_price"), 0)
+        self.engine.record_demotion("create_notion_page", "cid-demote")
+        self.assertEqual(self.engine.get_status_for_task({"class": "create_notion_page"}, "cid-after"), "pending_approval")
+        self.assertEqual(self.engine._read_approvals("create_notion_page"), 0)
 
     def test_approvals_default_to_zero(self):
         """Unrecorded class approvals default to 0."""
@@ -118,19 +119,22 @@ class TestTrustLadderEngine(unittest.TestCase):
 
     def test_read_all_approvals_and_is_autonomous(self):
         """read_all_approvals must return map with all known classes and is_autonomous must check threshold."""
-        self.engine.record_approval("research", "cid-1")
-        self.engine.record_approval("research", "cid-2")
-        self.engine.record_approval("research", "cid-3")
-        self.engine.record_approval("message_person", "cid-4")
+        self.engine.record_approval("add_todo_task", "cid-1")
+        self.engine.record_approval("add_todo_task", "cid-2")
+        self.engine.record_approval("add_todo_task", "cid-3")
+        self.engine.record_approval("send_email", "cid-4")
 
-        ladder = self.engine.read_all_approvals(["research", "message_person", "make_call"])
-        self.assertEqual(ladder["research"], 3)
-        self.assertEqual(ladder["message_person"], 1)
-        self.assertEqual(ladder["make_call"], 0)
+        ladder = self.engine.read_all_approvals(["research", "add_todo_task", "send_email"])
+        self.assertEqual(ladder["add_todo_task"], 3)
+        self.assertEqual(ladder["send_email"], 1)
+        self.assertEqual(ladder["research"], 0)
 
-        self.assertTrue(self.engine.is_autonomous(ladder["research"]))
-        self.assertFalse(self.engine.is_autonomous(ladder["message_person"]))
-        self.assertFalse(self.engine.is_autonomous(ladder["make_call"]))
+        # research is READ_ONLY (threshold=0) → always autonomous
+        self.assertTrue(self.engine.is_autonomous("research", ladder["research"]))
+        # add_todo_task is SOFT (threshold=3), now at 3 → autonomous
+        self.assertTrue(self.engine.is_autonomous("add_todo_task", ladder["add_todo_task"]))
+        # send_email is HARD (threshold=None) → never autonomous
+        self.assertFalse(self.engine.is_autonomous("send_email", ladder["send_email"]))
 
 
 if __name__ == "__main__":

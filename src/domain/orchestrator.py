@@ -16,6 +16,7 @@ from src.domain.logger import log_event
 from src.domain.parser import GeminiAudioParser
 from src.domain.task_repo import TaskRepository
 from src.domain.trust_ladder import TrustLadderEngine
+from src.executors.base import APPROVED, AUTO_APPROVED, PENDING_APPROVAL, REJECTED
 
 # Verified against gemini-3.5-flash: audio/webm, audio/ogg, audio/mp4 and
 # audio/wav all parse, with or without a ";codecs=opus" suffix. video/webm is
@@ -109,6 +110,9 @@ class TaskOrchestrator:
                 # record "audio" with no evidence.
                 "source": task_item.get("source", "audio"),
                 "evidence": task_item.get("evidence") or None,
+                # Persisted so the trust-ladder block survives the Firestore
+                # round-trip on approve and deferred paths.
+                "unresolved_recipient": task_item.get("unresolved_recipient", False),
                 "status": status,
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "usage": token_usage,
@@ -119,7 +123,7 @@ class TaskOrchestrator:
             # response. Stamping the state in the same write the doc is created
             # with costs nothing and means the doc is never observable as
             # auto-approved with no execution state under it.
-            if status == "auto_approved":
+            if status == AUTO_APPROVED:
                 doc_data["execution_status"] = "executing"
 
             if task_lane == "later":
@@ -133,93 +137,9 @@ class TaskOrchestrator:
 
         # Compute summary for client UI and spoken confirmation
         total = len(saved_tasks)
-        pending = sum(1 for t in saved_tasks if t.get("status") == "pending_approval")
+        pending = sum(1 for t in saved_tasks if t.get("status") == PENDING_APPROVAL)
         watching = sum(1 for t in saved_tasks if t.get("lane") == "later")
-        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == "auto_approved" and t.get("class")}))
-
-        summary = {
-            "total": total,
-            "pending": pending,
-            "watching": watching,
-            "auto_classes": auto_classes,
-            "correlation_id": correlation_id
-        }
-
-        return {
-            "tasks": saved_tasks,
-            "summary": summary,
-            "usage": token_usage
-        }
-
-
-    def process_text_note(self, text: str, correlation_id: str,
-                          image_path: str = None, image_mime: str = None) -> dict:
-        """Pipeline for text input: parse tasks, apply trust ladder, persist."""
-        import time
-        from src.domain.logger import log_event
-        from datetime import datetime, timezone
-        from google.cloud import firestore
-
-        image_bytes = None
-        if image_path:
-            with open(image_path, "rb") as f:
-                image_bytes = f.read()
-
-        start_time = time.time()
-        tasks_list, token_usage = self.parser.parse_text(
-            text, image_bytes=image_bytes, image_mime=image_mime)
-        latency = round(time.time() - start_time, 2)
-
-        log_event(correlation_id, "tasks extracted",
-            count=len(tasks_list),
-            token_usage=token_usage,
-            latency_seconds=latency,
-            with_image=bool(image_bytes)
-        )
-
-        saved_tasks = []
-        for task_item in tasks_list:
-            task_class = task_item.get("class", "other")
-            task_text = task_item.get("task")
-            task_lane = task_item.get("lane")
-            condition = task_item.get("condition")
-            defer_duration_minutes = task_item.get("defer_duration_minutes", 1)
-
-            log_event(correlation_id, "triage decision",
-                task=task_text,
-                lane=task_lane,
-                task_class=task_class
-            )
-
-            status = self.trust_engine.get_status_for_task(task_item, correlation_id)
-
-            doc_data = {
-                "task": task_text,
-                "lane": task_lane,
-                "class": task_class,
-                "condition": condition,
-                "source": task_item.get("source"),
-                "evidence": task_item.get("evidence") or None,
-                "status": status,
-                "created_at": firestore.SERVER_TIMESTAMP,
-                "usage": token_usage,
-                "correlation_id": correlation_id
-            }
-
-            if task_lane == "later" and defer_duration_minutes:
-                doc_data["check_after"] = datetime.now(timezone.utc).timestamp() + (defer_duration_minutes * 60)
-
-            saved = self.repo.save_task(doc_data)
-            saved_tasks.append(saved)
-
-            if status == "auto_approved" and task_lane != "later":
-                from src.domain.executor_runner import executor
-                executor.queue(saved["id"])
-
-        total = len(saved_tasks)
-        pending = sum(1 for t in saved_tasks if t.get("status") == "pending_approval")
-        watching = sum(1 for t in saved_tasks if t.get("lane") == "later")
-        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == "auto_approved" and t.get("class")}))
+        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == AUTO_APPROVED and t.get("class")}))
 
         summary = {
             "total": total,
@@ -248,8 +168,8 @@ class TaskOrchestrator:
         correlation_id = data.get("correlation_id", task_id)
 
         execution = None
-        if data.get("status") == "pending_approval":
-            self.repo.update(task_id, {"status": "approved"})
+        if data.get("status") == PENDING_APPROVAL:
+            self.repo.update(task_id, {"status": APPROVED})
             task_class = data.get("class", "other")
             self.trust_engine.record_approval(task_class, correlation_id)
 
@@ -257,7 +177,7 @@ class TaskOrchestrator:
             # re-polls, so the extra seconds here are acceptable on the manual
             # path.
             execution = run_for_task(
-                self.repo._db, task_id, data, correlation_id)
+                self.repo, task_id, data, correlation_id)
 
         return {"status": "ok", "execution": execution}
 
@@ -266,10 +186,10 @@ class TaskOrchestrator:
         data = self.repo.get_or_raise(task_id)
         correlation_id = data.get("correlation_id", task_id)
 
-        self.repo.update(task_id, {"status": "rejected"})
+        self.repo.update(task_id, {"status": REJECTED})
 
         # If rejecting an auto-executed task, reset the ladder (demotion signal)
-        if data.get("status") == "auto_approved":
+        if data.get("status") == AUTO_APPROVED:
             task_class = data.get("class", "other")
             self.trust_engine.record_demotion(task_class, correlation_id)
 

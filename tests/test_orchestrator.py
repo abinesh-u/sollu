@@ -31,7 +31,7 @@ class FakeTrustEngine:
         self.approvals_recorded = []
         self.demotions_recorded = []
 
-    def get_status_for_task(self, task_class: str, correlation_id: str) -> str:
+    def get_status_for_task(self, task: dict, correlation_id: str) -> str:
         return self.default_status
 
     def record_approval(self, task_class: str, correlation_id: str):
@@ -81,7 +81,7 @@ class TestTaskOrchestrator(unittest.TestCase):
         self.assertEqual(len(trust_engine.approvals_recorded), 1)
         self.assertEqual(trust_engine.approvals_recorded[0], ("make_call", "cid-approve-1"))
         mock_run.assert_called_once_with(
-            repo._db,
+            repo,
             "task-1",
             {"class": "make_call", "task": "Call the plumber", "status": "pending_approval", "correlation_id": "cid-approve-1", "id": "task-1"},
             "cid-approve-1"

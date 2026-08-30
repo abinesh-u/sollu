@@ -11,21 +11,13 @@ thin HTTP adapter.
 import asyncio
 import json
 
-from dotenv import dotenv_values
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.events import Event
 from google.adk.runners import InMemoryRunner
 from google.adk.tools import FunctionTool
-from google.cloud import firestore
 from google.genai import types
 
-from src.domain.orchestrator import TaskOrchestrator
-from src.domain.parser import GeminiAudioParser
-from src.domain.task_repo import TaskRepository
-
-cfg = dotenv_values(".env")
-db = firestore.Client(project=cfg.get("GOOGLE_CLOUD_PROJECT"))
-orchestrator = TaskOrchestrator(TaskRepository(db), GeminiAudioParser())
+from src.singletons import orchestrator
 
 
 def extract_tasks_from_audio(audio_path: str, correlation_id: str,
