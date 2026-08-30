@@ -16,7 +16,7 @@ from src.domain.logger import log_event
 from src.domain.parser import GeminiAudioParser
 from src.domain.task_repo import TaskRepository
 from src.domain.trust_ladder import TrustLadderEngine
-from src.executors.base import AUTO_APPROVED, PENDING_APPROVAL
+from src.executors.base import APPROVED, AUTO_APPROVED, PENDING_APPROVAL, REJECTED
 
 # Verified against gemini-3.5-flash: audio/webm, audio/ogg, audio/mp4 and
 # audio/wav all parse, with or without a ";codecs=opus" suffix. video/webm is
@@ -168,8 +168,8 @@ class TaskOrchestrator:
         correlation_id = data.get("correlation_id", task_id)
 
         execution = None
-        if data.get("status") == "pending_approval":
-            self.repo.update(task_id, {"status": "approved"})
+        if data.get("status") == PENDING_APPROVAL:
+            self.repo.update(task_id, {"status": APPROVED})
             task_class = data.get("class", "other")
             self.trust_engine.record_approval(task_class, correlation_id)
 
@@ -186,7 +186,7 @@ class TaskOrchestrator:
         data = self.repo.get_or_raise(task_id)
         correlation_id = data.get("correlation_id", task_id)
 
-        self.repo.update(task_id, {"status": "rejected"})
+        self.repo.update(task_id, {"status": REJECTED})
 
         # If rejecting an auto-executed task, reset the ladder (demotion signal)
         if data.get("status") == AUTO_APPROVED:
