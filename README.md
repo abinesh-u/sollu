@@ -1,135 +1,143 @@
 # Sollu: Voice-Note Errand Agent
 
-Sollu is a voice-note errand agent built for the All Things Agentic Hackathon (Taskmaster track). 
-
-A spoken voice note is sent to Gemini, decomposed into discrete tasks, and each task is triaged into a lane (`now`, `next`, `later`). The distinguishing feature is the **trust ladder**: the agent starts by asking permission for every task class (e.g. `message_person`, `make_call`, `watch_price`), and promotes a class to auto-execute once enough approvals have accrued. Rejections demote it back.
+Say it once — Sollu turns a voice note into triaged, executed tasks, decided by a
+**trust ladder**: read-only tasks auto-run instantly, soft tasks (to-do, Notion) earn
+auto-run per class after 3 approvals, hard tasks (email) never auto-run. Approval isn't a
+checkbox — it runs a real executor and puts a real artifact on the card.
 
 **Deployed:** <https://voice-agent-155260241110.asia-south1.run.app>
 
-| Hackathon mandatory | How this repo meets it |
+## Built With
+
+| Layer | Choice |
 |---|---|
-| Gemini 3.5+ | `gemini-3.5-flash` — triage, extraction, every executor (see [Models](#models)) |
-| One Google Agent Framework | `google-adk` — `src/agent.py`'s `VoiceAgent` sits on the live `POST /tasks` path (see [Architecture](#architecture)), it's not a standalone demo file |
-| One Google Cloud infra service | Cloud Run (compute) + Firestore Native mode (state), both in `asia-south1` |
+| Reasoning (triage, extraction, every executor) | `gemini-3.5-flash` |
+| Agent framework | `google-adk` — `src/agent.py`'s `VoiceAgent` sits on the live `POST /tasks` path |
+| Compute + state | Cloud Run + Firestore Native, `asia-south1` |
+| External actions | MCP client → Gmail, Google Tasks, Notion |
 
-## Architecture
+---
 
-![System architecture](docs/architecture-system.png)
+## Repository Structure
 
-Full diagram source, the trust-ladder state chart, and the reasoning behind
-the region/model split live in [`docs/architecture.md`](docs/architecture.md).
+```
+.
+├── main.py
+├── src/
+│   ├── agent.py
+│   ├── mcp_server.py
+│   ├── domain/
+│   │   ├── orchestrator.py
+│   │   ├── parser.py
+│   │   ├── trust_ladder.py
+│   │   ├── executor_runner.py
+│   │   ├── evaluator.py
+│   │   ├── intents.py
+│   │   ├── task_repo.py
+│   │   ├── speaker.py
+│   │   ├── vertex.py
+│   │   └── logger.py
+│   └── executors/
+│       ├── mcp_executor.py
+│       ├── gemini_executors.py
+│       ├── price_executor.py
+│       ├── base.py
+│       └── registry.py
+├── frontend/src/components/
+├── tests/
+├── scripts/
+│   ├── ops/
+│   ├── dev/
+│   ├── eval/
+│   └── fixtures/sample.wav
+└── docs/submission.md
+```
 
-## Models
+---
 
-| Purpose | Model |
+## Implementation Insights
+
+- **Reversibility, not frequency, sets the threshold.** `TrustLadderEngine._get_threshold`: `0` read-only, `3` soft, `None` (never) hard — tracked per class in Firestore, so `add_todo_task` and `create_notion_page` earn trust independently. Hard tasks structurally can't promote, no matter how much trust accrues elsewhere.
+- **Idempotency on real actions.** `McpExecutor` hashes `note + intent + args` per MCP call, so a retry can't double-send a real email.
+- **Grounded search + schema compose.** 244s without `response_schema`, 18.7s with it. `executor_runner._run_with_deadline` enforces a real wall-clock deadline itself — `HttpOptions.timeout` is an httpx read timeout, not one.
+- **Grounding read from metadata, not prose.** The model's own `sources` field is a dead redirect link; real source is `grounding_metadata.grounding_chunks[].domain` (sometimes `None` — caught an IDC finding mislabeled "GOOGLE.COM").
+- **Model region ≠ infra region.** `gemini-3.5-flash` isn't PAYG in `asia-south1`; called at the `global` endpoint while Cloud Run/Firestore stay regional.
+- **Safety is the ladder, not a bolt-on.** Every class starts `pending_approval`; one rejection resets it to zero; `POST /api/cron/deferred` requires `X-Cron-Secret`; every step logs by `correlation_id`.
+- **TTS is kept dumb.** Gets one finished sentence, never audio/transcript/task text; failure degrades silently to text.
+
+---
+
+## Where to Look
+
+| Claim | Verify it here |
 |---|---|
-| Triage, extraction, and every executor | `gemini-3.5-flash` |
-| Spoken confirmation only | `gemini-2.5-flash-tts` |
+| ADK agent is on the live path | `main.py:92` → `src/agent.py:64` (`run_voice_agent`) → `:47` (`VoiceAgent`) |
+| Reversibility-gated thresholds | `src/domain/trust_ladder.py:10-19` |
+| Trust tracked per class | one Firestore doc per class; classes in `src/domain/intents.py` |
+| MCP execution is real | `src/executors/mcp_executor.py` |
+| No double-send on retry | `mcp_executor.py:24-33` (`_get_idempotency_key`), used at `:87` |
+| Grounding from metadata | `gemini_executors.py:97-105` |
+| Search + schema compose | `gemini_executors.py:59,84-86` |
+| Real wall-clock deadline | `executor_runner.py:34-41` |
+| Cron route is authenticated | `main.py:38,190` |
+| Run the stability check first | `uv run python scripts/ops/positive_control.py --runs 5` |
 
-All reasoning runs on **`gemini-3.5-flash`**. The secondary model is output-only: it is
-handed one finished sentence, built in Python from counts the pipeline has already
-computed, and reads it aloud. It never touches triage, extraction, execution, or the
-trust ladder, it never receives the audio or a transcript, and if it fails the app is
-unchanged — spoken confirmation is off by default and degrades silently to the text
-summary.
-
-## What approval actually does
-
-Approving a task runs an executor for its class, and the artifact appears on the card.
+## What Approval Actually Does
 
 | Class | Executor | Real or stub |
 |---|---|---|
-| `research` | `gemini-3.5-flash` with Google Search grounding | real, web-grounded |
-| `message_person` | `gemini-3.5-flash` draft message | **draft only — never sent** |
-| `make_call` | `gemini-3.5-flash` call script | **script only — no call placed** |
-| `watch_price` | Deferred condition evaluator | **stubbed price source** |
-| `other` | none | reports `no_executor` |
+| `send_email` | MCP (Gmail) | **real** |
+| `add_todo_task` | MCP (Google Tasks) | **real** |
+| `create_notion_page` | MCP (Notion) | **real** |
+| `research` | Gemini + Google Search | **real, web-grounded** |
+| `watch_price` | Deferred evaluator | **stubbed price source** |
+| `other` | none | `no_executor` |
 
-Grounding is reported from the response's `grounding_metadata`, never inferred from the
-prose, so a "Web-grounded" tag means a search actually ran. `GET /api/classes` exposes
-each class's executor status.
+`GET /api/classes` exposes live executor status. Manual approval runs inline; auto-approval runs in the background.
 
-Manual approval executes inline. Auto-approval executes in a background task so upload
-latency stays flat — a grounded research call takes ~10–17s and runs per task — and the
-card shows an `executing` state until the artifact lands.
-
-## External Integrations via MCP (Model Context Protocol)
-
-Sollu is designed to execute real-world tasks across personal productivity tools (like Notion, Google Sheets, Todoist, and Apple Notes). However, rather than building custom, brittle API integrations and complex OAuth flows into the core codebase, we adopted the **Model Context Protocol (MCP)**.
-
-By leveraging the native MCP support (`McpToolset`) built into the `google-adk` framework:
-- **Plug-and-play Autonomy**: The agent acts as an MCP client. It dynamically connects to MCP servers, discovers their tools, and allows `gemini-3.5-flash` to use them directly (e.g., dynamically calling a Notion `add_database_row` tool when a user logs an expense).
-- **Reduced Deploy Risk**: We avoid expanding dependencies and hardcoding external service credentials inside the Cloud Run deployment.
-- **Maximum Agentic Capability**: This approach proves that the agent can generalize to arbitrary external environments simply by passing the parsed intent to an LLM equipped with an MCP toolset, completely bypassing the need for boilerplate integration code.
-
-## Input
-
-A voice note can be recorded in the browser or uploaded as a file. An optional image
-travels in the **same** `gemini-3.5-flash` request as a second content part, and is
-treated as supporting evidence for what the speaker said rather than a second source of
-tasks; what it contributed is recorded in `source` and `evidence`.
-
-## Safety and Guardrails
-
-Sollu's safety story is inherently built into its core mechanic—the **Trust Ladder**. Rather than bolting on an opaque guardrails layer, Sollu provides verifiable, progressive autonomy:
-
-- **No Implicit Execution**: Nothing irreversible executes without explicit user approval. All new task classes start at a baseline of `pending_approval`.
-- **Earned Autonomy**: Autonomy is earned strictly per-class (e.g., authorizing calendar access does not authorize making phone calls). 
-- **Instant Revocation**: A single rejection of an auto-executed task serves as a strong demotion signal, instantly resetting the agent's autonomy for that class back to zero.
-- **Secure Asynchronous State Mutation**: Deferred lane evaluation relies on a protected HTTP push endpoint. The `POST /api/cron/deferred` route is strictly secured behind an `X-Cron-Secret` header to prevent unauthenticated mutation of task states. External condition evaluators (such as flight prices or weather APIs) are structurally stubbed to guarantee deterministic execution for the demo without compromising the evaluation mechanic.
-- **Full Observability**: Every autonomy change—promotions, demotions, and ladder consultations, and deferred task checks—is logged with strict correlation IDs, providing a fully auditable lifecycle of every voice note.
-
-*Note on Architecture: The trust ladder directly influences the triage pipeline. The triage logic natively consults the ledger before a task is even scheduled, directly mapping user-granted authority to system execution boundaries.*
+---
 
 ## Setup (local)
 
-Prerequisites: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), Node 18+ (frontend only),
-a GCP project with **Vertex AI** and **Firestore (Native mode)** enabled, and
-[Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
-for that project (`gcloud auth application-default login`).
+**No setup:** use <https://voice-agent-155260241110.asia-south1.run.app>.
 
+**Spine only:**
 ```bash
-git clone <this repo> && cd voice-agent
-cp .env.example .env        # fill in GOOGLE_CLOUD_PROJECT, CRON_SECRET
-uv sync                     # installs from pyproject.toml / uv.lock
+gcloud auth application-default login
+# set GOOGLE_CLOUD_PROJECT in .env
+uv run uvicorn main:app --reload --port 8080
+```
+Workspace actions degrade to a "Draft/Queued" simulation, not failure — the ladder's floor, not a gap. Upload `scripts/fixtures/sample.wav` to test without speaking.
+
+**Full Workspace (real Gmail/Tasks):**
+1. Web-app OAuth client in GCP, redirect URI `http://localhost:8080/oauth/callback`
+2. Fill `.env` from `.env.example` (`GOOGLE_CLIENT_ID/SECRET`, `SETUP_PASSWORD`)
+3. Visit `/oauth/start?password=<pw>`, authorize — token saved to Firestore
+
+*Testing-status consent screens expire refresh tokens after 7 days; re-run `/oauth/start` if auth fails.*
 
 ```bash
 cd frontend && npm install && npm run build && cd ..
 uv run uvicorn main:app --reload --port 8080
-```
-
-Open `http://localhost:8080` — the backend serves the built React SPA from `frontend/dist`. To run with hot-reload during development:
-
-```bash
-cd frontend && npm run dev     # Vite dev server with hot reload
+# hot reload: cd frontend && npm run dev
 ```
 
 ## Deploy (Cloud Run)
 
-`requirements.txt` is gitignored — the Cloud Run buildpack needs it, so a clean
-clone must regenerate it from the committed `uv.lock` **before every deploy**:
-
 ```bash
 uv export -o requirements.txt --no-hashes && sed -i '' '/^-e \.$/d' requirements.txt
 
-gcloud run deploy voice-agent \
-  --source . \
-  --project <your-gcp-project> \
-  --region asia-south1 \
-  --allow-unauthenticated \
+gcloud run deploy voice-agent --source . --project <your-gcp-project> \
+  --region asia-south1 --allow-unauthenticated \
   --set-env-vars GOOGLE_CLOUD_PROJECT=<your-gcp-project>,GOOGLE_CLOUD_LOCATION=asia-south1,GOOGLE_GENAI_USE_VERTEXAI=TRUE,CRON_SECRET=<your-secret>
 ```
 
-No `Dockerfile` — Cloud Run's buildpack builds directly from `--source .`.
-If your local network has no working IPv6 route to Google (Python/gcloud hang
-for minutes on first connection while `curl` doesn't), deploy from
-[Cloud Shell](https://cloud.google.com/shell) instead, or run
-`networksetup -setv6off Wi-Fi` locally.
+No Dockerfile — buildpack from `--source .`. No IPv6 route to Google locally? Deploy from [Cloud Shell](https://cloud.google.com/shell) or `networksetup -setv6off Wi-Fi`.
 
 ## Testing
 
 ```bash
-uv run python -m unittest discover -s tests    # unit tests — the orchestrator, trust ladder, executor seams
-uv run python scripts/positive_control.py --runs 5   # gate: real audio through the production parser, checks count+lane+class stability
-uv run python scripts/test_agent.py                  # smoke test: one voice note through the full ADK-wired path (writes real Firestore docs)
+uv run python -m unittest discover -s tests             # unit tests
+uv run python scripts/ops/positive_control.py --runs 5  # stability check: count+lane+class
+uv run python scripts/eval/test_agent.py                # smoke test, full ADK path
 ```

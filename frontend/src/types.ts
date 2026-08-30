@@ -57,6 +57,7 @@ export interface ClassInfo {
   executor: string;
   approvals: number;
   auto: boolean;
+  threshold?: number | 'never';
   ui_label?: string;
   ui_description?: string;
   ui_output_label?: string;

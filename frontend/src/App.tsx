@@ -57,10 +57,10 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshData]);
 
-  const handleProcessAudio = async (audioBlob: Blob, filename: string, imageFile?: File | null) => {
+  const handleProcessAudio = async (audioBlob: Blob | null, filename: string, imageFile?: File | null, text?: string) => {
     setIsProcessing(true);
     try {
-      const res = await processAudio(audioBlob, filename, imageFile);
+      const res = await processAudio(audioBlob, filename, imageFile, text);
       if (res.tasks) {
         setTasks(res.tasks);
         await refreshData();
@@ -127,6 +127,16 @@ export const App: React.FC = () => {
   }, [refreshData]);
 
 
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    try {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      await import('./services/api').then(m => m.deleteTask(taskId));
+    } catch (err) {
+      console.error(`Delete failed:`, err);
+      await refreshData();
+    }
+  }, [refreshData]);
+
   return (
     <div className="app-layout">
       <main className="app-content">
@@ -183,6 +193,7 @@ export const App: React.FC = () => {
                 focusedTaskId={null}
                 onApproveTask={handleApproveWithUndo}
                 onRejectTask={handleRejectTask}
+                onDeleteTask={handleDeleteTask}
                 onViewArtifact={(task) => setSelectedArtifactTask(task)}
               />
             </div>

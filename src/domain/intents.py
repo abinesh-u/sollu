@@ -11,7 +11,7 @@ from src.executors.mcp_executor import McpExecutor
 class Reversibility(Enum):
     HARD = "HARD"  # Irreversible, externally visible (e.g. sending email)
     SOFT = "SOFT"  # 2-second undo, internal state only (e.g. creating a task, logging expense)
-    NONE = "NONE"  # Read-only or safe background task
+    READ_ONLY = "READ_ONLY"  # Read-only or safe background task
 
 @dataclass
 class TaskIntent:
@@ -49,34 +49,14 @@ INTENTS = [
         executor_instance=McpExecutor(label="MCP (Tasks)", mcp_server_url=mcp_url)
     ),
     TaskIntent(
-        id="append_to_doc",
-        prompt_instruction="append_to_doc",
-        ui_label="Brain Dump",
-        ui_description="Appended via Google Docs.",
-        ui_output_label="Revision ID",
+        id="create_notion_page",
+        prompt_instruction="create_notion_page",
+        ui_label="Add Notion Page",
+        ui_description="Page appended to Notion database.",
+        ui_output_label="Notion Page ID",
         ui_icon_name="FileText",
         reversibility=Reversibility.SOFT,
-        executor_instance=McpExecutor(label="MCP (Docs)", mcp_server_url=mcp_url)
-    ),
-    TaskIntent(
-        id="log_expense",
-        prompt_instruction="log_expense",
-        ui_label="Log Expense",
-        ui_description="Logged via Google Sheets.",
-        ui_output_label="Row added",
-        ui_icon_name="DollarSign",
-        reversibility=Reversibility.SOFT,
-        executor_instance=McpExecutor(label="MCP (Sheets)", mcp_server_url=mcp_url)
-    ),
-    TaskIntent(
-        id="create_calendar_event",
-        prompt_instruction="create_calendar_event",
-        ui_label="Schedule Event",
-        ui_description="Scheduled via Google Calendar.",
-        ui_output_label="Event Link",
-        ui_icon_name="Calendar",
-        reversibility=Reversibility.SOFT,
-        executor_instance=McpExecutor(label="MCP (Calendar)", mcp_server_url=mcp_url)
+        executor_instance=McpExecutor(label="MCP (Notion)", mcp_server_url=mcp_url)
     ),
     TaskIntent(
         id="research",
@@ -85,7 +65,7 @@ INTENTS = [
         ui_description="Web search executed and summarized.",
         ui_output_label="Research synthesis",
         ui_icon_name="Search",
-        reversibility=Reversibility.NONE,
+        reversibility=Reversibility.READ_ONLY,
         executor_instance=ResearchExecutor()
     ),
     TaskIntent(
@@ -95,7 +75,7 @@ INTENTS = [
         ui_description="Condition registered for deferred evaluation.",
         ui_output_label="Condition recorded",
         ui_icon_name="TrendingUp",
-        reversibility=Reversibility.NONE,
+        reversibility=Reversibility.READ_ONLY,
         executor_instance=WatchPriceExecutor()
     ),
     TaskIntent(
@@ -105,7 +85,7 @@ INTENTS = [
         ui_description="No executor — approval is recorded only.",
         ui_output_label="Execution result",
         ui_icon_name="FileText",
-        reversibility=Reversibility.NONE,
+        reversibility=Reversibility.READ_ONLY,
         executor_instance=None
     )
 ]

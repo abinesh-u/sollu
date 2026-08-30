@@ -46,6 +46,9 @@ class TaskRepository:
         payload["executed_at"] = firestore.SERVER_TIMESTAMP
         self._col.document(task_id).update(payload)
 
+    def delete(self, task_id: str) -> None:
+        self.coll.document(task_id).delete()
+
     def list_recent(self, limit: int = 50) -> list[dict]:
         """Tasks ordered by created_at descending, serialised for JSON."""
         tasks = []

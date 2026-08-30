@@ -77,9 +77,10 @@
   gap: var(--spacing-24);
 }
 
+
 .lane-empty {
   grid-column: 1 / -1;
-  height: 120px;
+  height: 220px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -89,11 +90,22 @@
   padding: var(--spacing-16);
   border: 2px dashed rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-cards);
-  background-color: transparent;
   color: var(--color-fog);
+  position: relative;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+.lane-empty-img {
+  width: 140px;
+  height: auto;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  opacity: 1;
 }
 
 .lane-empty-title {
+
   font-family: var(--font-figtree);
   font-size: var(--text-body-sm);
   font-weight: 500;
@@ -107,4 +119,15 @@
   .lane-cards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.lane-empty-shader {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

@@ -5,9 +5,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 # The exact scopes we requested in the Google Cloud Console
 SCOPES = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/drive.file'
+    'https://www.googleapis.com/auth/gmail.compose',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/tasks'
 ]
 
 def authenticate():
@@ -33,6 +33,11 @@ def authenticate():
         print("Success! token.json has been generated.")
     else:
         print("token.json is already valid.")
+
+    print("\n--- REFRESH TOKEN ---")
+    print("Add this to Secret Manager as sollu-google-refresh-token (Tier 2 setup) or GOOGLE_REFRESH_TOKEN in .env (Tier 1 setup)")
+    print(creds.refresh_token)
+    print("---------------------\n")
 
 if __name__ == '__main__':
     authenticate()

@@ -130,3 +130,44 @@ class GeminiAudioParser:
         
         tasks_list = json.loads(resp.text).get("tasks", [])
         return tasks_list, token_usage
+
+    def parse_text(self, text: str, image_bytes: bytes = None, image_mime: str = None) -> tuple[list, dict]:
+        """Parses a text transcript into structured tasks and returns token usage."""
+        parts = [text]
+        if image_bytes:
+            parts.append(types.Part.from_bytes(
+                data=image_bytes, mime_type=image_mime or "image/jpeg"))
+
+        resp = self.client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=[self.prompt, *parts],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=self.schema,
+                temperature=0.0,
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=0,
+                    include_thoughts=False,
+                ),
+            ),
+        )
+        
+        token_usage = {
+            "audio": 0,
+            "text": 0,
+            "candidate": 0,
+            "total": 0
+        }
+        
+        if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
+            um = resp.usage_metadata
+            token_usage["candidate"] = getattr(um, 'candidates_token_count', 0)
+            token_usage["total"] = getattr(um, 'total_token_count', 0)
+            
+            if hasattr(um, 'prompt_tokens_details') and um.prompt_tokens_details:
+                for detail in um.prompt_tokens_details:
+                    if 'TEXT' in str(detail.modality):
+                        token_usage["text"] += detail.token_count
+        
+        tasks_list = json.loads(resp.text).get("tasks", [])
+        return tasks_list, token_usage

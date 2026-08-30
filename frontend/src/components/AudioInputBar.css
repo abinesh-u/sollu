@@ -24,7 +24,32 @@
 }
 
 .capture-mic-badge {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-fog);
+  color: var(--color-slate);
+  transition: all 0.2s ease;
+}
+
+.capture-mic-badge.recording-pulse {
+  background: rgba(255, 68, 68, 0.1);
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+  }
 }
 
 .capture-body {

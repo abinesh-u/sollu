@@ -7,9 +7,10 @@ Read this before writing any code in this repo.
 Sollu, a voice-note errand agent for the All Things Agentic Hackathon (Taskmaster
 track). A spoken note is decomposed into tasks, each triaged into a lane
 (`now` | `next` | `later`) and a class. The distinguishing feature is the **trust
-ladder**: every task class starts by asking permission, and promotes to
-auto-execute after 3 approvals. One rejection of an auto-approved task demotes it
-to zero.
+ladder**. Tasks are tiered by reversibility: read-only tasks auto-execute instantly,
+soft tasks (like creating notes) ask for permission and promote to auto-execute
+after 3 approvals, and hard tasks (like sending emails) never auto-execute. One
+rejection of an auto-approved soft task demotes it back to zero approvals.
 
 Approval is not bookkeeping — it runs an executor and puts a real artifact on the
 card. That is the thing judges check, so keep it working.
@@ -31,7 +32,7 @@ not for elegance.
 | Package manager | `uv` |
 | Deploy | Cloud Run buildpack via `--source .`, no Dockerfile |
 | Thinking budget | `0` for triage (verified: correct output; see Latency) |
-| Auto-execute threshold | 3 approvals |
+| Auto-execute threshold | 3 approvals (soft tasks) |
 
 Why the global endpoint: Gemini 3.5 Flash is offered in asia-south1 only as Single
 Zone Provisioned Throughput, so it is not reachable pay-as-you-go from Mumbai.
@@ -103,7 +104,7 @@ These cost hours to discover. Trust them over your priors:
 ## The gate
 
 ```
-uv run python scripts/positive_control.py --runs 5
+uv run python scripts/ops/positive_control.py --runs 5
 ```
 
 Runs `GeminiAudioParser.parse_audio` — the same code path `POST /tasks` uses —

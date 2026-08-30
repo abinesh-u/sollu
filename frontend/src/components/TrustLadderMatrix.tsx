@@ -9,8 +9,6 @@ interface TrustLadderMatrixProps {
   classes: ClassInfo[];
 }
 
-const THRESHOLD = 3;
-
 export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes }) => {
   return (
     <div className="trust-ladder-container">
@@ -27,11 +25,11 @@ export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes })
         <div className="ladder-legend">
           <span className="legend-item">
             <span className="legend-dot dot-muted" />
-            <span>Under 3 approvals: asks first</span>
+            <span>Asks first</span>
           </span>
           <span className="legend-item legend-item-strong">
             <span className="legend-dot dot-lime" />
-            <span>3+ approvals: runs on its own</span>
+            <span>Runs on its own</span>
           </span>
         </div>
       </div>
@@ -40,7 +38,8 @@ export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes })
         <div className="ladder-carousel">
           {classes.map((cls) => {
             const approvals = cls.approvals || 0;
-            const isAuto = approvals >= THRESHOLD;
+            const threshold = cls.threshold !== undefined ? cls.threshold : 3;
+            const isAuto = cls.auto;
             const label = cls.ui_label || cls.label || cls.class;
 
             return (
@@ -55,9 +54,21 @@ export const TrustLadderMatrix: React.FC<TrustLadderMatrixProps> = ({ classes })
                 <div className="ladder-card-footer">
                   <div className="ladder-progress-row">
                     <span>Approvals:</span>
-                    <span className={isAuto ? 'is-max' : ''}>{approvals} / {THRESHOLD}</span>
+                    {threshold === 'never' ? (
+                       <span style={{ opacity: 0.6 }}>Always asks</span>
+                    ) : threshold === 0 ? (
+                       <span className="is-max">Instant Auto</span>
+                    ) : (
+                       <span className={isAuto ? 'is-max' : ''}>{approvals} / {threshold}</span>
+                    )}
                   </div>
-                  <TrustRung score={approvals} max={THRESHOLD} />
+                  {threshold === 'never' ? (
+                     <TrustRung score={0} max={3} />
+                  ) : threshold === 0 ? (
+                     <TrustRung score={3} max={3} />
+                  ) : (
+                     <TrustRung score={approvals} max={threshold as number} />
+                  )}
                   
                   <div className="ladder-status-row">
                     {isAuto ? (

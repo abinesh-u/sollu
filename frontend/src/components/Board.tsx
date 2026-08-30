@@ -11,6 +11,7 @@ interface BoardProps {
   focusedTaskId: string | null;
   onApproveTask: (task: Task, actionVerb: string) => void;
   onRejectTask: (taskId: string) => Promise<void>;
+  onDeleteTask: (taskId: string) => Promise<void>;
   onViewArtifact: (task: Task) => void;
 }
 
@@ -26,6 +27,7 @@ export const Board: React.FC<BoardProps> = ({
   focusedTaskId,
   onApproveTask,
   onRejectTask,
+  onDeleteTask,
   onViewArtifact,
 }) => {
   return (
@@ -57,6 +59,7 @@ export const Board: React.FC<BoardProps> = ({
                       isFocused={focusedTaskId === task.id}
                       onApprove={onApproveTask}
                       onReject={onRejectTask}
+                      onDelete={onDeleteTask}
                       onViewArtifact={onViewArtifact}
                     />
                   ))

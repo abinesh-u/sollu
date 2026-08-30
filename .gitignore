@@ -22,3 +22,6 @@ requirements.txt
 # Google API Credentials
 credentials.json
 token.json
+
+# Runtime logs (see scripts/ops/positive_control.py --log)
+logs/
