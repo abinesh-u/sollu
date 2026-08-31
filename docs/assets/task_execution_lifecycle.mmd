@@ -1,0 +1,40 @@
+sequenceDiagram
+    actor User
+    participant UI as Frontend
+    participant API as FastAPI
+    participant ADK as Google ADK
+    participant Agent as VoiceAgent
+    participant Orch as TaskOrchestrator
+    participant Gemini as Gemini 3.5 Flash
+    participant Trust as Trust Ladder
+    participant DB as Firestore
+    participant Exec as Executor Runner
+    participant MCP as MCP Server
+    participant External as Gmail / Tasks / Notion
+
+    User->>UI: Record voice note
+    UI->>API: POST /tasks
+    API->>ADK: run_voice_agent()
+    ADK->>Agent: VoiceAgent
+    Agent->>Orch: process_voice_note()
+    Orch->>Gemini: Audio + optional image
+    Gemini-->>Orch: Structured tasks
+    Orch->>Trust: Check task class + approvals
+    Trust-->>Orch: pending / auto-approved
+    Orch->>DB: Persist task
+
+    alt Auto-approved
+        Orch->>Exec: Queue execution
+    else Pending approval
+        UI-->>User: Show approval card
+        User->>API: Approve task
+        API->>Orch: approve()
+        Orch->>Trust: Record approval
+        Orch->>Exec: Execute task
+    end
+
+    Exec->>MCP: Execute tool
+    MCP->>External: Real API action
+    External-->>MCP: Result
+    MCP->>DB: Store action receipt
+    Exec->>DB: Store artifact + execution status

@@ -7,18 +7,25 @@ checkbox — it runs a real executor and puts a real artifact on the card.
 
 **Deployed:** <https://voice-agent-155260241110.asia-south1.run.app>
 
+## Architecture
+
+![Sollu Architecture Diagram](docs/assets/architecture_diagram.png)
+
 ## Built With
 
 | Layer | Choice |
 |---|---|
 | Reasoning (triage, extraction, every executor) | `gemini-3.5-flash` |
+| Voice confirmation (spoken output) | `gemini-2.5-flash-tts` |
 | Agent framework | `google-adk` — `src/agent.py`'s `VoiceAgent` sits on the live `POST /tasks` path |
 | Compute + state | Cloud Run + Firestore Native, `asia-south1` |
-| External actions | MCP client → Gmail, Google Tasks, Notion |
+| External actions | In-process MCP server → Gmail, Google Sheets, Notion |
 
 ---
 
 ## Agent Design
+
+![Task Execution Lifecycle](docs/assets/task_execution_lifecycle.png)
 
 - `VoiceAgent` is a custom `google-adk` `BaseAgent`, not an `LlmAgent` — one voice note in, one deterministic triage pass out, so it directly invokes one `FunctionTool` and yields the result as an ADK `Event` rather than delegating a decision to an LLM at the orchestration layer. (`src/agent.py:47-58`)
 - `run_voice_agent()` is the only ADK-facing entry point — it owns the Runner/session plumbing so `main.py` stays a thin HTTP adapter. (`src/agent.py:64-90`)
@@ -171,7 +178,6 @@ gcloud run deploy voice-agent --source . --project <your-gcp-project> \
   --set-env-vars GOOGLE_CLOUD_PROJECT=<your-gcp-project>,GOOGLE_CLOUD_LOCATION=asia-south1,GOOGLE_GENAI_USE_VERTEXAI=TRUE,CRON_SECRET=<your-secret>
 ```
 
-No Dockerfile — buildpack from `--source .`. No IPv6 route to Google locally? Deploy from [Cloud Shell](https://cloud.google.com/shell) or `networksetup -setv6off Wi-Fi`.
 
 ## Testing
 
