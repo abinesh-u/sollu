@@ -24,10 +24,14 @@ Assistants make this worse two ways: asking permission for everything is a chore
 
 ## How We Built It
 
+![Sollu Technical Architecture](assets/architecture_diagram.png)
+
 - **Pipeline** — FastAPI on Cloud Run hands off to a real Google ADK agent (`VoiceAgent` on an ADK Runner) sitting directly on the live request path, which calls the orchestrator, which asks `gemini-3.5-flash` to decompose the note in one structured, schema-typed call.
 - **Trust ladder** — per-class thresholds in Firestore: 0 approvals (read-only), 3 (soft), never (hard). Crossing one logs a promotion event.
-- **Execution** — an MCP client calls real tools (Gmail, Tasks, Notion), each call carrying an idempotency key so a retry can't double-send. Manual approvals run inline; auto-approvals run in the background.
+- **Execution** — an MCP client calls real tools (Gmail, Google Sheets, Notion), each call carrying an idempotency key so a retry can't double-send. Manual approvals run inline; auto-approvals run in the background.
 - **Stack** — `gemini-3.5-flash` (all reasoning) + `gemini-2.5-flash-tts` (confirmation only) + Firestore + Cloud Run + a React/Vite frontend with a live trust-ladder view.
+
+![Sollu Task Execution Lifecycle](assets/task_execution_lifecycle.png)
 
 ## Challenges We Overcame
 

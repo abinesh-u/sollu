@@ -34,7 +34,7 @@ app = FastAPI(title="Voice Agent API")
 app.routes.extend(mcp.sse_app().routes)
 
 def verify_cron_secret(x_cron_secret: str = Header(None)):
-    expected = cfg.get("CRON_SECRET")
+    expected = cfg.get("CRON_SECRET") or os.environ.get("CRON_SECRET")
     if not expected or x_cron_secret != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return x_cron_secret
@@ -49,7 +49,7 @@ def verify_api_secret(x_api_secret: str = Header(None)):
     shared-secret gate shipped to the frontend bundle, not per-user auth — it
     stops drive-by URL discovery, not a motivated reader of the page source.
     """
-    expected = cfg.get("API_SECRET")
+    expected = cfg.get("API_SECRET") or os.environ.get("API_SECRET")
     if expected and x_api_secret != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return x_api_secret

@@ -62,6 +62,7 @@ export interface ClassInfo {
   ui_description: string;
   ui_output_label: string;
   ui_icon_name: string;
+  description?: string;
   approvals: number;
   auto: boolean;
   threshold?: number | 'never';
