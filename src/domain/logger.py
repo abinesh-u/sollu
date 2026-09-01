@@ -1,5 +1,6 @@
 import json
 
+
 def log_event(correlation_id: str, event: str, **kwargs):
     """
     Structured JSON logger writing directly to stdout.

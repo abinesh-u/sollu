@@ -8,6 +8,7 @@ as an ADK `Event`. `run_voice_agent()` is the only ADK-facing entry point the
 rest of the app needs — it owns the Runner/session plumbing so main.py stays a
 thin HTTP adapter.
 """
+
 import asyncio
 import json
 
@@ -20,9 +21,13 @@ from google.genai import types
 from src.singletons import orchestrator
 
 
-def extract_tasks_from_audio(audio_path: str, correlation_id: str,
-                              image_path: str = None, image_mime: str = None,
-                              audio_mime: str = None) -> dict:
+def extract_tasks_from_audio(
+    audio_path: str,
+    correlation_id: str,
+    image_path: str = None,
+    image_mime: str = None,
+    audio_mime: str = None,
+) -> dict:
     """ADK tool: run the orchestrator on one voice note.
 
     correlation_id is supplied by the caller, never minted here — AGENTS.md's
@@ -30,7 +35,8 @@ def extract_tasks_from_audio(audio_path: str, correlation_id: str,
     so one note's whole lifecycle greps out under a single id.
     """
     return orchestrator.process_voice_note(
-        audio_path, correlation_id, image_path, image_mime, audio_mime)
+        audio_path, correlation_id, image_path, image_mime, audio_mime
+    )
 
 
 extract_tool = FunctionTool(extract_tasks_from_audio)
@@ -45,17 +51,22 @@ class VoiceAgent(BaseAgent):
         yield Event(
             author=self.name,
             content=types.Content(
-                parts=[types.Part.from_text(text=json.dumps(result))],
-                role="model"))
+                parts=[types.Part.from_text(text=json.dumps(result))], role="model"
+            ),
+        )
 
 
 agent = VoiceAgent(name="voice_taskmaster")
 _runner = InMemoryRunner(agent=agent, app_name="voice_taskmaster")
 
 
-async def run_voice_agent(audio_path: str, correlation_id: str,
-                           image_path: str = None, image_mime: str = None,
-                           audio_mime: str = None) -> dict:
+async def run_voice_agent(
+    audio_path: str,
+    correlation_id: str,
+    image_path: str = None,
+    image_mime: str = None,
+    audio_mime: str = None,
+) -> dict:
     """main.py's entry point: drive the ADK Runner for one voice note.
 
     Creates a throwaway session keyed to correlation_id, sends the tool's
@@ -63,21 +74,29 @@ async def run_voice_agent(audio_path: str, correlation_id: str,
     agent yields back.
     """
     session = await _runner.session_service.create_session(
-        app_name="voice_taskmaster", user_id="voice_agent",
-        session_id=correlation_id)
+        app_name="voice_taskmaster", user_id="voice_agent", session_id=correlation_id
+    )
     message = types.Content(
-        parts=[types.Part.from_text(text=json.dumps({
-            "audio_path": audio_path,
-            "correlation_id": correlation_id,
-            "image_path": image_path,
-            "image_mime": image_mime,
-            "audio_mime": audio_mime,
-        }))],
-        role="user")
+        parts=[
+            types.Part.from_text(
+                text=json.dumps(
+                    {
+                        "audio_path": audio_path,
+                        "correlation_id": correlation_id,
+                        "image_path": image_path,
+                        "image_mime": image_mime,
+                        "audio_mime": audio_mime,
+                    }
+                )
+            )
+        ],
+        role="user",
+    )
 
     result = None
     async for event in _runner.run_async(
-            user_id="voice_agent", session_id=session.id, new_message=message):
+        user_id="voice_agent", session_id=session.id, new_message=message
+    ):
         if event.content and event.content.parts and event.content.parts[0].text:
             result = json.loads(event.content.parts[0].text)
     return result

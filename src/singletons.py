@@ -5,7 +5,9 @@ there is exactly one Firestore client, one TaskRepository, and one
 TaskOrchestrator for the lifetime of the process — one trust ladder, one
 set of approval counts, one connection pool.
 """
+
 import os
+
 from dotenv import dotenv_values
 from google.cloud import firestore
 

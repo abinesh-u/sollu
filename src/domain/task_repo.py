@@ -5,8 +5,10 @@ Callers never see collection names, field name strings, SERVER_TIMESTAMP, or
 the in-memory filter workaround for deferred tasks. Change a field name or
 a query shape → change one file.
 """
+
+from datetime import UTC, datetime
+
 from google.cloud import firestore
-from datetime import datetime, timezone
 
 
 class TaskRepository:
@@ -24,7 +26,7 @@ class TaskRepository:
         doc_data["id"] = doc_ref.id
         # SERVER_TIMESTAMP is a sentinel, not serialisable — replace with a
         # wall-clock value for the response payload only.
-        doc_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        doc_data["created_at"] = datetime.now(UTC).isoformat()
         return doc_ref.id, doc_data
 
     def get_or_raise(self, task_id: str) -> dict:
@@ -52,10 +54,11 @@ class TaskRepository:
     def list_recent(self, limit: int = 50) -> list[dict]:
         """Tasks ordered by created_at descending, serialised for JSON."""
         tasks = []
-        docs = (self._col
-                .order_by("created_at", direction=firestore.Query.DESCENDING)
-                .limit(limit)
-                .stream())
+        docs = (
+            self._col.order_by("created_at", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+            .stream()
+        )
         for doc in docs:
             t = doc.to_dict()
             t["id"] = doc.id

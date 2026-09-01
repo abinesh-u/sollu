@@ -6,6 +6,7 @@ auto-run per class after 3 approvals, hard tasks (email) never auto-run. Approva
 checkbox — it runs a real executor and puts a real artifact on the card.
 
 **Deployed:** <https://voice-agent-155260241110.asia-south1.run.app>
+**Demo Video:** <https://youtu.be/fPrifAXGCYY>
 
 ## Architecture
 

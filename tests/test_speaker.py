@@ -1,6 +1,7 @@
 import struct
 import unittest
-from src.domain.speaker import build_summary, _wav
+
+from src.domain.speaker import _wav, build_summary
 
 
 class TestSpeaker(unittest.TestCase):
@@ -22,14 +23,11 @@ class TestSpeaker(unittest.TestCase):
     def test_build_summary_with_watching_and_auto_approved(self):
         """Mixed tasks with pending, watching, and auto-approved classes."""
         summary = build_summary(
-            total=4,
-            pending=1,
-            watching=1,
-            auto_classes=["message_person", "make_call"]
+            total=4, pending=1, watching=1, auto_classes=["message_person", "make_call"]
         )
         self.assertEqual(
             summary,
-            "I found 4 tasks. One needs your approval, one is being watched, message person auto-approved, and make call auto-approved."
+            "I found 4 tasks. One needs your approval, one is being watched, message person auto-approved, and make call auto-approved.",
         )
 
     def test_build_summary_three_auto_classes_oxford_comma(self):
@@ -38,11 +36,11 @@ class TestSpeaker(unittest.TestCase):
             total=3,
             pending=0,
             watching=0,
-            auto_classes=["research", "message_person", "make_call"]
+            auto_classes=["research", "message_person", "make_call"],
         )
         self.assertEqual(
             summary,
-            "I found 3 tasks. Research auto-approved, message person auto-approved, and make call auto-approved."
+            "I found 3 tasks. Research auto-approved, message person auto-approved, and make call auto-approved.",
         )
 
     def test_wav_header_packing_format(self):
@@ -66,7 +64,9 @@ class TestSpeaker(unittest.TestCase):
         self.assertEqual(fmt_size, 16)
 
         # Audio format PCM = 1, 1 channel, 24000 Hz, 16 bits
-        audio_format, channels, rate, byte_rate, block_align, bits = struct.unpack("<HHIIHH", wav_data[20:36])
+        audio_format, channels, rate, byte_rate, block_align, bits = struct.unpack(
+            "<HHIIHH", wav_data[20:36]
+        )
         self.assertEqual(audio_format, 1)
         self.assertEqual(channels, 1)
         self.assertEqual(rate, 24000)

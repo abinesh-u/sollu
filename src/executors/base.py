@@ -4,6 +4,7 @@ An executor turns an approved task into an artifact. It never sends, posts, or
 places anything externally — `message_person` and `make_call` produce drafts
 that a human still has to act on.
 """
+
 from dataclasses import dataclass, field
 
 # execution_status values written onto the task document.

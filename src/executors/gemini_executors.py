@@ -8,6 +8,7 @@ schema is therefore not optional here — it is what keeps the call inside the
 timeout. Thinking is left at its default: AGENTS.md locks thinking_budget=0 for
 *triage*, and with tools attached a zero budget stalls rather than erroring.
 """
+
 import json
 import time
 
@@ -15,7 +16,6 @@ from google.genai import types
 
 from src.domain.vertex import vertex_client
 from src.executors.base import (
-    DRAFT_READY,
     EXECUTED,
     MAX_TOOL_CALLS,
     ExecutionResult,
@@ -59,7 +59,10 @@ def _usage(resp) -> dict:
 RESEARCH_SCHEMA = {
     "type": "object",
     "properties": {
-        "finding": {"type": "string", "description": "Two or three sentences answering the task."},
+        "finding": {
+            "type": "string",
+            "description": "Two or three sentences answering the task.",
+        },
     },
     "required": ["finding"],
 }
@@ -97,7 +100,7 @@ class ResearchExecutor:
             gm = resp.candidates[0].grounding_metadata
             if gm:
                 queries = list(gm.web_search_queries or [])
-                for c in (gm.grounding_chunks or []):
+                for c in gm.grounding_chunks or []:
                     chunks += 1
                     web = getattr(c, "web", None)
                     # Publisher name, not the vertexaisearch redirect URI those
@@ -121,6 +124,6 @@ class ResearchExecutor:
 
 
 __all__ = [
-    "ResearchExecutor",
     "MAX_TOOL_CALLS",
+    "ResearchExecutor",
 ]

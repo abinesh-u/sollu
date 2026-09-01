@@ -13,6 +13,7 @@ One-way only: one request, one utterance, no session, no websocket, no turn
 taking. Every failure degrades to text -- the caller gets None and the UI keeps
 its existing text summary.
 """
+
 import io
 import struct
 import time
@@ -48,8 +49,9 @@ def _plural(n: int, word: str) -> str:
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
 
 
-def build_summary(total: int, pending: int, watching: int,
-                  auto_classes: list = None) -> str:
+def build_summary(
+    total: int, pending: int, watching: int, auto_classes: list = None
+) -> str:
     """The sentence to speak, built here in Python.
 
     Deliberately not model-generated: this is a confirmation of numbers already
@@ -61,17 +63,27 @@ def build_summary(total: int, pending: int, watching: int,
     parts = [f"I found {_plural(total, 'task')}."]
     clauses = []
     if pending:
-        clauses.append(f"{_plural(pending, 'task')} need your approval"
-                       if pending != 1 else "one needs your approval")
+        clauses.append(
+            f"{_plural(pending, 'task')} need your approval"
+            if pending != 1
+            else "one needs your approval"
+        )
     if watching:
-        clauses.append(f"{watching} are being watched" if watching != 1
-                       else "one is being watched")
-    for cls in (auto_classes or []):
+        clauses.append(
+            f"{watching} are being watched" if watching != 1 else "one is being watched"
+        )
+    for cls in auto_classes or []:
         clauses.append(f"{cls.replace('_', ' ')} auto-approved")
 
     if clauses:
-        parts.append((", ".join(clauses[:-1]) + f", and {clauses[-1]}"
-                      if len(clauses) > 1 else clauses[0]).capitalize() + ".")
+        parts.append(
+            (
+                ", ".join(clauses[:-1]) + f", and {clauses[-1]}"
+                if len(clauses) > 1
+                else clauses[0]
+            ).capitalize()
+            + "."
+        )
     return " ".join(parts)
 
 
@@ -83,8 +95,11 @@ def _wav(pcm: bytes, rate: int = PCM_RATE) -> bytes:
     buf.write(b"RIFF")
     buf.write(struct.pack("<I", 36 + len(pcm)))
     buf.write(b"WAVEfmt ")
-    buf.write(struct.pack("<IHHIIHH", 16, 1, PCM_CHANNELS, rate,
-                          byte_rate, block_align, PCM_BITS))
+    buf.write(
+        struct.pack(
+            "<IHHIIHH", 16, 1, PCM_CHANNELS, rate, byte_rate, block_align, PCM_BITS
+        )
+    )
     buf.write(b"data")
     buf.write(struct.pack("<I", len(pcm)))
     buf.write(pcm)
@@ -107,7 +122,8 @@ def speak(text: str, correlation_id: str = "speak") -> bytes | None:
                 speech_config=types.SpeechConfig(
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name=VOICE)
+                            voice_name=VOICE
+                        )
                     )
                 ),
             ),
@@ -123,15 +139,25 @@ def speak(text: str, correlation_id: str = "speak") -> bytes | None:
                 rate = int(token.split("=", 1)[1])
 
         wav = _wav(pcm, rate)
-        log_event(correlation_id, "spoken confirmation",
-                  model=MODEL, ok=True,
-                  elapsed_seconds=round(time.perf_counter() - t0, 2),
-                  pcm_bytes=len(pcm), source_mime=blob.mime_type)
+        log_event(
+            correlation_id,
+            "spoken confirmation",
+            model=MODEL,
+            ok=True,
+            elapsed_seconds=round(time.perf_counter() - t0, 2),
+            pcm_bytes=len(pcm),
+            source_mime=blob.mime_type,
+        )
         return wav
     except Exception as e:
         # Never raises. The spoken layer is decoration; triage, execution and
         # the ladder must be untouched by anything that happens here.
-        log_event(correlation_id, "spoken confirmation", model=MODEL, ok=False,
-                  elapsed_seconds=round(time.perf_counter() - t0, 2),
-                  error=f"{type(e).__name__}: {e}"[:200])
+        log_event(
+            correlation_id,
+            "spoken confirmation",
+            model=MODEL,
+            ok=False,
+            elapsed_seconds=round(time.perf_counter() - t0, 2),
+            error=f"{type(e).__name__}: {e}"[:200],
+        )
         return None

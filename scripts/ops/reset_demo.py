@@ -10,6 +10,7 @@ Usage:
     uv run python scripts/reset_demo.py --clear-only
     uv run python scripts/reset_demo.py --notes 3 --audio /path/to/note.wav
 """
+
 import argparse
 import sys
 import uuid
@@ -40,8 +41,12 @@ def clear(db):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--audio", default="/tmp/voice-test/positive.wav")
-    ap.add_argument("--notes", type=int, default=3,
-                    help="voice notes to process; needs >= 3 to leave one make_call pending")
+    ap.add_argument(
+        "--notes",
+        type=int,
+        default=3,
+        help="voice notes to process; needs >= 3 to leave one make_call pending",
+    )
     ap.add_argument("--clear-only", action="store_true")
     args = ap.parse_args()
 
@@ -62,31 +67,42 @@ def main():
     print(f"\nProcessing {args.notes} voice note(s) from {audio.name}...")
     for i in range(args.notes):
         result = orchestrator.process_voice_note(str(audio), str(uuid.uuid4()))
-        print(f"  note {i + 1}: {len(result['tasks'])} tasks, "
-              f"{result['usage']['total']} tokens")
+        print(
+            f"  note {i + 1}: {len(result['tasks'])} tasks, "
+            f"{result['usage']['total']} tokens"
+        )
 
     # Approve all but one task of the promote class, using the real ladder engine.
     engine = TrustLadderEngine(db)
-    pending = [d for d in db.collection("tasks").stream()
-               if d.to_dict().get("class") == PROMOTE_CLASS
-               and d.to_dict().get("status") == "pending_approval"]
+    pending = [
+        d
+        for d in db.collection("tasks").stream()
+        if d.to_dict().get("class") == PROMOTE_CLASS
+        and d.to_dict().get("status") == "pending_approval"
+    ]
 
     if len(pending) < engine.AUTO_EXECUTE_THRESHOLD:
-        print(f"\n! only {len(pending)} '{PROMOTE_CLASS}' tasks — need "
-              f"{engine.AUTO_EXECUTE_THRESHOLD} to stage the live promotion. "
-              f"Re-run with --notes {engine.AUTO_EXECUTE_THRESHOLD}.")
+        print(
+            f"\n! only {len(pending)} '{PROMOTE_CLASS}' tasks — need "
+            f"{engine.AUTO_EXECUTE_THRESHOLD} to stage the live promotion. "
+            f"Re-run with --notes {engine.AUTO_EXECUTE_THRESHOLD}."
+        )
 
-    to_approve = pending[:engine.AUTO_EXECUTE_THRESHOLD - 1]
+    to_approve = pending[: engine.AUTO_EXECUTE_THRESHOLD - 1]
     for doc in to_approve:
         doc.reference.update({"status": "approved"})
         engine.record_approval(PROMOTE_CLASS, f"demo-reset-{doc.id}")
 
-    ladder = {d.id: d.to_dict().get("approvals", 0)
-              for d in db.collection("trust_ladder").stream()}
+    ladder = {
+        d.id: d.to_dict().get("approvals", 0)
+        for d in db.collection("trust_ladder").stream()
+    }
     print(f"\nLadder: {ladder or '(all classes at zero)'}")
-    print(f"'{PROMOTE_CLASS}' at {ladder.get(PROMOTE_CLASS, 0)}/"
-          f"{engine.AUTO_EXECUTE_THRESHOLD} — approving the remaining "
-          f"{len(pending) - len(to_approve)} on camera promotes it live.")
+    print(
+        f"'{PROMOTE_CLASS}' at {ladder.get(PROMOTE_CLASS, 0)}/"
+        f"{engine.AUTO_EXECUTE_THRESHOLD} — approving the remaining "
+        f"{len(pending) - len(to_approve)} on camera promotes it live."
+    )
 
 
 if __name__ == "__main__":

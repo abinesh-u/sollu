@@ -4,6 +4,7 @@ exactly as main.py's POST /tasks handler does.
 Usage:
     uv run python scripts/test_agent.py [audio_path] [correlation_id]
 """
+
 import asyncio
 import json
 import sys

@@ -3,6 +3,7 @@
 Delegates to the existing ConditionEvaluator rather than reimplementing it, so
 there is one stubbed price/weather source in the codebase, not two.
 """
+
 import time
 
 from src.domain.evaluator import ConditionEvaluator
@@ -22,7 +23,8 @@ class WatchPriceExecutor:
         condition = task.get("condition") or ""
         met = _evaluator.evaluate(condition)
         artifact = (
-            f"Condition met: {condition}" if met
+            f"Condition met: {condition}"
+            if met
             else f"Not yet — still watching: {condition or 'no condition recorded'}"
         )
         return ExecutionResult(

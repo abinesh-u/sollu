@@ -1,6 +1,7 @@
 import unittest
-from unittest.mock import MagicMock
+
 from google.cloud import firestore
+
 from src.domain.trust_ladder import TrustLadderEngine
 
 
@@ -80,20 +81,31 @@ class TestTrustLadderEngine(unittest.TestCase):
     def test_new_task_starts_as_pending_approval(self):
         """Tasks with 0 approvals must evaluate to pending_approval for a SOFT class."""
         # add_todo_task is SOFT (threshold=3); 0 approvals → pending
-        status = self.engine.get_status_for_task({"class": "add_todo_task"}, correlation_id="cid-1")
+        status = self.engine.get_status_for_task(
+            {"class": "add_todo_task"}, correlation_id="cid-1"
+        )
         self.assertEqual(status, "pending_approval")
 
     def test_reaching_three_approvals_promotes_and_records_event(self):
         """Recording 3 approvals must cross threshold to auto_approved and write promotion_events."""
         self.engine.record_approval("add_todo_task", "cid-1")
-        self.assertEqual(self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-1"), "pending_approval")
+        self.assertEqual(
+            self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-1"),
+            "pending_approval",
+        )
 
         self.engine.record_approval("add_todo_task", "cid-2")
-        self.assertEqual(self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-2"), "pending_approval")
+        self.assertEqual(
+            self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-2"),
+            "pending_approval",
+        )
 
         # Third approval crosses threshold (3)
         self.engine.record_approval("add_todo_task", "cid-3")
-        self.assertEqual(self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-3"), "auto_approved")
+        self.assertEqual(
+            self.engine.get_status_for_task({"class": "add_todo_task"}, "cid-3"),
+            "auto_approved",
+        )
 
         # Verify promotion event was written
         events = self.db.collection("promotion_events").added
@@ -106,11 +118,21 @@ class TestTrustLadderEngine(unittest.TestCase):
         # Setup a SOFT class with 3 approvals
         for i in range(3):
             self.engine.record_approval("create_notion_page", f"cid-{i}")
-        self.assertEqual(self.engine.get_status_for_task({"class": "create_notion_page"}, "cid-check"), "auto_approved")
+        self.assertEqual(
+            self.engine.get_status_for_task(
+                {"class": "create_notion_page"}, "cid-check"
+            ),
+            "auto_approved",
+        )
 
         # Demote
         self.engine.record_demotion("create_notion_page", "cid-demote")
-        self.assertEqual(self.engine.get_status_for_task({"class": "create_notion_page"}, "cid-after"), "pending_approval")
+        self.assertEqual(
+            self.engine.get_status_for_task(
+                {"class": "create_notion_page"}, "cid-after"
+            ),
+            "pending_approval",
+        )
         self.assertEqual(self.engine._read_approvals("create_notion_page"), 0)
 
     def test_approvals_default_to_zero(self):
@@ -124,7 +146,9 @@ class TestTrustLadderEngine(unittest.TestCase):
         self.engine.record_approval("add_todo_task", "cid-3")
         self.engine.record_approval("send_email", "cid-4")
 
-        ladder = self.engine.read_all_approvals(["research", "add_todo_task", "send_email"])
+        ladder = self.engine.read_all_approvals(
+            ["research", "add_todo_task", "send_email"]
+        )
         self.assertEqual(ladder["add_todo_task"], 3)
         self.assertEqual(ladder["send_email"], 1)
         self.assertEqual(ladder["research"], 0)
@@ -132,7 +156,9 @@ class TestTrustLadderEngine(unittest.TestCase):
         # research is READ_ONLY (threshold=0) → always autonomous
         self.assertTrue(self.engine.is_autonomous("research", ladder["research"]))
         # add_todo_task is SOFT (threshold=3), now at 3 → autonomous
-        self.assertTrue(self.engine.is_autonomous("add_todo_task", ladder["add_todo_task"]))
+        self.assertTrue(
+            self.engine.is_autonomous("add_todo_task", ladder["add_todo_task"])
+        )
         # send_email is HARD (threshold=None) → never autonomous
         self.assertFalse(self.engine.is_autonomous("send_email", ladder["send_email"]))
 

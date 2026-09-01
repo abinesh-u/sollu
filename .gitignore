@@ -25,3 +25,5 @@ token.json
 
 # Runtime logs (see scripts/ops/positive_control.py --log)
 logs/
+
+.claude/

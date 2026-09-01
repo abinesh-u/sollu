@@ -15,6 +15,7 @@ codebase, which makes it useless as a regression signal.
 Usage:
     uv run python scripts/positive_control.py --runs 5
 """
+
 import argparse
 import json
 import statistics
@@ -41,13 +42,19 @@ def main():
     ap.add_argument("--audio", default="scripts/fixtures/sample.wav")
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--log", default="logs/runs.jsonl")
-    ap.add_argument("--budget", type=int, default=None,
-                    help="accepted for backwards compatibility and ignored -- "
-                         "thinking_budget is owned by GeminiAudioParser")
+    ap.add_argument(
+        "--budget",
+        type=int,
+        default=None,
+        help="accepted for backwards compatibility and ignored -- "
+        "thinking_budget is owned by GeminiAudioParser",
+    )
     args = ap.parse_args()
 
     if args.budget is not None:
-        print(f"note: --budget {args.budget} ignored; the parser sets thinking_budget itself\n")
+        print(
+            f"note: --budget {args.budget} ignored; the parser sets thinking_budget itself\n"
+        )
 
     audio_bytes = Path(args.audio).read_bytes()
     parser = GeminiAudioParser()
@@ -80,15 +87,19 @@ def main():
         with log_path.open("a") as f:
             f.write(json.dumps(record) + "\n")
 
-        print(f"=== RUN {run_idx}/{args.runs}  ({elapsed:.2f}s, {usage['total']} tokens) ===")
+        print(
+            f"=== RUN {run_idx}/{args.runs}  ({elapsed:.2f}s, {usage['total']} tokens) ==="
+        )
         for t in tasks:
             print(f"    [{t.get('lane')}/{t.get('class')}] {t.get('task')}")
 
     top_sig, top_n = sigs.most_common(1)[0]
     print(f"\n--- latency over {args.runs} runs ---")
-    print(f"  p50 {statistics.median(elapsed_all):.2f}s   "
-          f"min {min(elapsed_all):.2f}s   max {max(elapsed_all):.2f}s")
-    print(f"\n--- stability (count + lane + class) ---")
+    print(
+        f"  p50 {statistics.median(elapsed_all):.2f}s   "
+        f"min {min(elapsed_all):.2f}s   max {max(elapsed_all):.2f}s"
+    )
+    print("\n--- stability (count + lane + class) ---")
     for sig, n in sigs.most_common():
         print(f"  {n}/{args.runs}  {sig}")
     print(f"\nVERDICT: {top_n}/{args.runs} identical on count+lane+class")

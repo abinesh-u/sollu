@@ -4,6 +4,7 @@ Both the triage parser and the executors need a client against the same project
 and the same `global` model endpoint (locked in AGENTS.md). Keeping one builder
 means there is no second config path to drift.
 """
+
 import os
 
 from dotenv import dotenv_values
@@ -19,9 +20,11 @@ def vertex_client(timeout_ms: int | None = None) -> genai.Client:
     """
     cfg = dotenv_values(".env")
     project = cfg.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GOOGLE_CLOUD_PROJECT")
-    location = (cfg.get("GOOGLE_CLOUD_LOCATION")
-                or os.environ.get("GOOGLE_CLOUD_LOCATION")
-                or "global")
+    location = (
+        cfg.get("GOOGLE_CLOUD_LOCATION")
+        or os.environ.get("GOOGLE_CLOUD_LOCATION")
+        or "global"
+    )
 
     kwargs = {}
     if timeout_ms is not None:

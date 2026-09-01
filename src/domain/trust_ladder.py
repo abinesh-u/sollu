@@ -1,8 +1,9 @@
-import math
 from google.cloud import firestore
+
+from src.domain.intents import Reversibility, get_intent
 from src.domain.logger import log_event
-from src.domain.intents import get_intent, Reversibility
 from src.executors.base import AUTO_APPROVED, PENDING_APPROVAL
+
 
 class TrustLadderEngine:
     def __init__(self, db: firestore.Client):
@@ -12,7 +13,7 @@ class TrustLadderEngine:
         """Determines the required approvals based on task risk. None = never auto-approves."""
         intent = get_intent(task_class)
         reversibility = intent.reversibility if intent else Reversibility.READ_ONLY
-        
+
         if reversibility == Reversibility.READ_ONLY:
             return 0
         if reversibility == Reversibility.SOFT:
@@ -51,14 +52,20 @@ class TrustLadderEngine:
             status = PENDING_APPROVAL
         else:
             # Delegate to is_autonomous so the autonomy rule lives in one place.
-            status = AUTO_APPROVED if self.is_autonomous(task_class, approvals) else PENDING_APPROVAL
+            status = (
+                AUTO_APPROVED
+                if self.is_autonomous(task_class, approvals)
+                else PENDING_APPROVAL
+            )
 
-        log_event(correlation_id, "ladder consulted",
+        log_event(
+            correlation_id,
+            "ladder consulted",
             task_class=task_class,
             current_approvals=approvals,
             threshold=threshold if threshold is not None else "never",
             resulting_autonomy=status,
-            unresolved_recipient=is_unresolved
+            unresolved_recipient=is_unresolved,
         )
         return status
 
@@ -70,6 +77,7 @@ class TrustLadderEngine:
         all come out together, assembled once in the module that owns the rules.
         """
         from src.executors.registry import describe
+
         approvals_map = self.read_all_approvals(known_classes)
         out = []
         for c in known_classes:
@@ -87,41 +95,52 @@ class TrustLadderEngine:
         ladder_ref = self.db.collection("trust_ladder").document(task_class)
         old_approvals = self._read_approvals(task_class)
         threshold = self._get_threshold(task_class)
-        
+
         ladder_ref.set({"approvals": firestore.Increment(1)}, merge=True)
         new_approvals = old_approvals + 1
-        
-        if threshold is not None and old_approvals < threshold and new_approvals >= threshold:
-            self.db.collection("promotion_events").add({
-                "task_class": task_class,
-                "timestamp": firestore.SERVER_TIMESTAMP,
-                "count": threshold
-            })
-            log_event(correlation_id, "promotion",
+
+        if (
+            threshold is not None
+            and old_approvals < threshold
+            and new_approvals >= threshold
+        ):
+            self.db.collection("promotion_events").add(
+                {
+                    "task_class": task_class,
+                    "timestamp": firestore.SERVER_TIMESTAMP,
+                    "count": threshold,
+                }
+            )
+            log_event(
+                correlation_id,
+                "promotion",
                 task_class=task_class,
                 old_state="pending_approval",
                 new_state="auto_approved",
-                trigger="user_approved_task"
+                trigger="user_approved_task",
             )
 
     def record_demotion(self, task_class: str, correlation_id: str):
         """Demotes a task class by resetting its approval count to 0."""
         threshold = self._get_threshold(task_class)
-        
+
         # READ_ONLY tasks (threshold 0) cannot be demoted.
         if threshold == 0:
             return
-            
+
         old_approvals = self._read_approvals(task_class)
-        
+
         self.db.collection("trust_ladder").document(task_class).set(
-            {"approvals": 0}, merge=True)
-        
+            {"approvals": 0}, merge=True
+        )
+
         # Only log demotion if it was previously auto-approved
         if threshold is not None and old_approvals >= threshold:
-            log_event(correlation_id, "demotion",
+            log_event(
+                correlation_id,
+                "demotion",
                 task_class=task_class,
                 old_state="auto_approved",
                 new_state="pending_approval",
-                trigger="user_rejected_auto_task"
+                trigger="user_rejected_auto_task",
             )

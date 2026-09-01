@@ -2,6 +2,7 @@
 
 This acts as a facade over the centralized Task Intent manifest.
 """
+
 from src.domain.intents import INTENTS, get_intent
 
 # Every class the triage schema can emit.
@@ -32,11 +33,10 @@ def describe(task_class: str) -> dict:
         "executor_kind": getattr(ex, "kind", None),
         "draft_only": bool(getattr(ex, "draft_only", False)),
         "label": getattr(ex, "label", "No executor — approval is recorded only"),
-        
         # UI Metadata from Intent
         "ui_label": intent.ui_label if intent else "Unknown",
         "ui_description": intent.ui_description if intent else "",
         "ui_output_label": intent.ui_output_label if intent else "",
         "ui_icon_name": intent.ui_icon_name if intent else "FileText",
-        "reversibility": intent.reversibility.value if intent else "NONE"
+        "reversibility": intent.reversibility.value if intent else "NONE",
     }

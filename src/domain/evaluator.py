@@ -5,7 +5,7 @@ class ConditionEvaluator:
         For demo purposes, this uses stubbed data sources.
         """
         if not condition:
-            return True # If no specific condition was given, assume it's ready
+            return True  # If no specific condition was given, assume it's ready
 
         condition_lower = condition.lower()
 

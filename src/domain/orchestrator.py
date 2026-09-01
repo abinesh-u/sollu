@@ -5,8 +5,9 @@ through completion. The HTTP layer calls one method per action and gets back a
 result; it never touches Firestore, the trust ladder, or executor dispatch
 directly.
 """
-from datetime import datetime, timezone
+
 import time
+from datetime import UTC, datetime
 
 from google.cloud import firestore
 
@@ -54,9 +55,14 @@ class TaskOrchestrator:
 
     # ── Ingest ──────────────────────────────────────────────────────────
 
-    def process_voice_note(self, audio_path: str, correlation_id: str,
-                           image_path: str = None, image_mime: str = None,
-                           audio_mime: str = None) -> dict:
+    def process_voice_note(
+        self,
+        audio_path: str,
+        correlation_id: str,
+        image_path: str = None,
+        image_mime: str = None,
+        audio_mime: str = None,
+    ) -> dict:
         """End-to-end pipeline: read audio, parse tasks, apply trust ladder, persist.
 
         An optional image is sent in the same Gemini request as the audio.
@@ -75,14 +81,17 @@ class TaskOrchestrator:
         start_time = time.time()
         # 1. Parse using Gemini
         tasks_list, token_usage = self.parser.parse_audio(
-            audio_bytes, mime, image_bytes=image_bytes, image_mime=image_mime)
+            audio_bytes, mime, image_bytes=image_bytes, image_mime=image_mime
+        )
         latency = round(time.time() - start_time, 2)
 
-        log_event(correlation_id, "tasks extracted",
+        log_event(
+            correlation_id,
+            "tasks extracted",
             count=len(tasks_list),
             token_usage=token_usage,
             latency_seconds=latency,
-            with_image=bool(image_bytes)
+            with_image=bool(image_bytes),
         )
 
         saved_tasks = []
@@ -93,10 +102,12 @@ class TaskOrchestrator:
             condition = task_item.get("condition")
             defer_duration_minutes = task_item.get("defer_duration_minutes", 1)
 
-            log_event(correlation_id, "triage decision",
+            log_event(
+                correlation_id,
+                "triage decision",
                 task=task_text,
                 task_class=task_class,
-                lane=task_lane
+                lane=task_lane,
             )
 
             # 2. Get status from Trust Ladder Engine
@@ -116,7 +127,7 @@ class TaskOrchestrator:
                 "status": status,
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "usage": token_usage,
-                "correlation_id": correlation_id
+                "correlation_id": correlation_id,
             }
 
             # Auto-approved tasks execute in the background straight after this
@@ -129,7 +140,9 @@ class TaskOrchestrator:
             if task_lane == "later":
                 doc_data["condition"] = condition
                 # Default to 1 minute in the future for demo purposes if not specified
-                doc_data["check_after"] = datetime.now(timezone.utc).timestamp() + (defer_duration_minutes * 60)
+                doc_data["check_after"] = datetime.now(UTC).timestamp() + (
+                    defer_duration_minutes * 60
+                )
 
             # 3. Persist to Firestore
             _, saved = self.repo.create(doc_data)
@@ -139,21 +152,25 @@ class TaskOrchestrator:
         total = len(saved_tasks)
         pending = sum(1 for t in saved_tasks if t.get("status") == PENDING_APPROVAL)
         watching = sum(1 for t in saved_tasks if t.get("lane") == "later")
-        auto_classes = sorted(list({t.get("class") for t in saved_tasks if t.get("status") == AUTO_APPROVED and t.get("class")}))
+        auto_classes = sorted(
+            list(
+                {
+                    t.get("class")
+                    for t in saved_tasks
+                    if t.get("status") == AUTO_APPROVED and t.get("class")
+                }
+            )
+        )
 
         summary = {
             "total": total,
             "pending": pending,
             "watching": watching,
             "auto_classes": auto_classes,
-            "correlation_id": correlation_id
+            "correlation_id": correlation_id,
         }
 
-        return {
-            "tasks": saved_tasks,
-            "summary": summary,
-            "usage": token_usage
-        }
+        return {"tasks": saved_tasks, "summary": summary, "usage": token_usage}
 
     # ── Approval / Rejection ────────────────────────────────────────────
 
@@ -176,8 +193,7 @@ class TaskOrchestrator:
             # Approval is what earns execution — run it now. The UI already
             # re-polls, so the extra seconds here are acceptable on the manual
             # path.
-            execution = run_for_task(
-                self.repo, task_id, data, correlation_id)
+            execution = run_for_task(self.repo, task_id, data, correlation_id)
 
         return {"status": "ok", "execution": execution}
 
@@ -202,7 +218,7 @@ class TaskOrchestrator:
 
         Returns a summary of what was promoted or re-deferred.
         """
-        now_ts = datetime.now(timezone.utc).timestamp()
+        now_ts = datetime.now(UTC).timestamp()
         ready = self.repo.list_deferred_ready(now_ts)
 
         results = []
@@ -217,21 +233,25 @@ class TaskOrchestrator:
 
             if is_met:
                 self.repo.update(task_id, {"lane": "next"})
-                log_event(task_cid, "deferred wake fired",
+                log_event(
+                    task_cid,
+                    "deferred wake fired",
                     task=data.get("task"),
                     old_state="later",
                     new_state="promoted_to_next",
-                    trigger="condition_met"
+                    trigger="condition_met",
                 )
                 results.append({"id": task_id, "action": "promoted"})
             else:
                 new_check_after = now_ts + (5 * 60)
                 self.repo.update(task_id, {"check_after": new_check_after})
-                log_event(task_cid, "deferred wake fired",
+                log_event(
+                    task_cid,
+                    "deferred wake fired",
                     task=data.get("task"),
                     old_state="later",
                     new_state="re-deferred",
-                    trigger="condition_not_met"
+                    trigger="condition_not_met",
                 )
                 results.append({"id": task_id, "action": "re-deferred"})
 
