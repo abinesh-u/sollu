@@ -5,7 +5,9 @@ Say it once - Sollu turns a voice note into triaged, executed tasks, decided by 
 auto-run per class after 3 approvals, hard tasks (email) never auto-run. Approval isn't a
 checkbox - it runs a real executor and puts a real artifact on the card.
 
-![Sollu Demo Video](https://img.youtube.com/vi/fPrifAXGCYY/maxresdefault.jpg)
+
+https://github.com/user-attachments/assets/5ee186e2-527d-4bfa-88ef-da6430839828
+
 
 ## Architecture
 
