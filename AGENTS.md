@@ -15,7 +15,7 @@ rejection of an auto-approved soft task demotes it back to zero approvals.
 Approval is not bookkeeping — it runs an executor and puts a real artifact on the
 card. That is the thing judges check, so keep it working.
 
-Deployed: <https://voice-agent-155260241110.asia-south1.run.app>
+Deployed: (Service offline)
 
 Deadline: Monday 31 Aug 2026, 5:00pm PDT. Optimise for a working deployed system,
 not for elegance.

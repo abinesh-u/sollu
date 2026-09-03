@@ -5,7 +5,7 @@ Say it once — Sollu turns a voice note into triaged, executed tasks, decided b
 auto-run per class after 3 approvals, hard tasks (email) never auto-run. Approval isn't a
 checkbox — it runs a real executor and puts a real artifact on the card.
 
-**Deployed:** <https://voice-agent-155260241110.asia-south1.run.app>
+**Deployed:** (Service offline)
 
 ## Architecture
 
@@ -145,7 +145,7 @@ checkbox — it runs a real executor and puts a real artifact on the card.
 
 ## Setup (local)
 
-**No setup:** use <https://voice-agent-155260241110.asia-south1.run.app>.
+**No setup:** (Service currently offline)
 
 **Spine only:**
 ```bash

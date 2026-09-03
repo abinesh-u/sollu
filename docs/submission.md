@@ -1,6 +1,6 @@
 # Sollu
 
-**Deployed:** https://voice-agent-155260241110.asia-south1.run.app
+**Deployed:** (Service offline)
 **Hackathon:** All Things Agentic Hackathon — Taskmaster track
 
 ## Elevator Pitch
